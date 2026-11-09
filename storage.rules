@@ -1,0 +1,12 @@
+rules_version = '2';
+service firebase.storage {
+ match /b/{bucket}/o {
+  match /organizations/{org}/tickets/{ticketId}/{file} {
+   function member(){return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;}
+   function permitted(){return request.auth != null && member().active == true && member().organization == org && (member().role in ['gerencia','administracion'] || firestore.get(/databases/(default)/documents/organizations/$(org)/tickets/$(ticketId)).data.payload.work.assignedUid == request.auth.uid);}
+   allow read: if permitted();
+   allow create: if permitted() && request.resource.size < 5 * 1024 * 1024 && request.resource.contentType == 'image/jpeg';
+   allow update,delete: if false;
+  }
+ }
+}

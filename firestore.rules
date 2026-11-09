@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn() { return request.auth != null; }
+  function member() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+  function allowed(org) { return signedIn() && member().active == true && member().organization == org; }
+  function office(org) { return allowed(org) && member().role in ['gerencia','administracion']; }
+  function validEnvelope() { return request.resource.data.keys().hasOnly(['payload','revision','updatedBy','updatedAt']) && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time; }
+  function createVersion() { return validEnvelope() && request.resource.data.revision == 1; }
+  function nextVersion() { return validEnvelope() && request.resource.data.revision == resource.data.revision + 1; }
+  match /users/{uid} {
+   allow read: if signedIn() && (request.auth.uid == uid || (member().active && resource.data.organization == member().organization));
+   // Provisioning only through a trusted Admin SDK / Firebase Console.
+   allow write: if false;
+  }
+  match /organizations/{org}/clients/{id} {
+   allow read: if allowed(org);
+   allow create: if office(org) && createVersion() && request.resource.data.payload.id == id && request.resource.data.payload.name is string;
+   allow update: if office(org) && nextVersion() && request.resource.data.payload.id == resource.data.payload.id;
+   allow delete: if false;
+  }
+  match /organizations/{org}/inventory/{id} {
+   allow read: if allowed(org);
+   function validStock(){return request.resource.data.payload.stock is int && request.resource.data.payload.stock >= 0 && request.resource.data.payload.price is number && request.resource.data.payload.price >= 0;}
+   allow create: if office(org) && createVersion() && validStock();
+   allow update: if office(org) && nextVersion() && validStock() && request.resource.data.payload.code == resource.data.payload.code;
+   allow delete: if false;
+  }
+  match /organizations/{org}/tickets/{id} {
+   function assigned(){return allowed(org) && resource.data.payload.work.assignedUid == request.auth.uid;}
+   function safeTechnicalEdit(){
+    let before=resource.data.payload; let after=request.resource.data.payload;
+    return after.diff(before).affectedKeys().hasOnly(['eval','work','events','updatedAt','status','completedAt'])
+     && after.work.diff(before.work).affectedKeys().hasOnly(['progress','qc','start','finished','responsible'])
+     && (after.eval == before.eval || before.status == 'evaluacion')
+     && (after.status == before.status || (before.status == 'inicio' && after.status == 'taller') || (before.status == 'taller' && after.status == 'entrega' && after.work.qc == true));
+   }
+   function validTicket(){let p=request.resource.data.payload;return p.id is number && p.clientId is string && p.equipment is string && p.paid is number && p.paid >= 0 && p.status in ['evaluacion','aprobacion','inicio','taller','entrega','documento','cerrado','rechazado'];}
+   allow read: if office(org) || assigned();
+   allow create: if office(org) && createVersion() && validTicket() && request.resource.data.payload.status == 'evaluacion';
+   allow update: if nextVersion() && validTicket() && request.resource.data.payload.id == resource.data.payload.id && (office(org) || (assigned() && safeTechnicalEdit()));
+   allow delete: if false;
+  }
+  match /organizations/{org}/invoices/{number} {
+   allow read: if office(org);
+   allow create: if office(org) && request.resource.data.keys().hasOnly(['ticketId']) && request.resource.data.ticketId is number;
+   allow update: if office(org) && request.resource.data == resource.data;
+   allow delete: if false;
+  }
+ }
+}
