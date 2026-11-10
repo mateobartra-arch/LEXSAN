@@ -63,10 +63,10 @@ const fresh = () => ({
     {
       id: "20456091033",
       type: "ruc",
-      name: "TRANSPORTES DEMO S.A.C.",
-      contact: "Contacto de demostración",
+      name: "TRANS VILAC EIRL",
+      contact: "Ing. Haslon",
       email: "",
-      phone: "000000000",
+      phone: "942660460",
     },
     {
       id: "20999999990",
@@ -738,10 +738,10 @@ function renderEvaluationView(t, money) {
   const sale = kindOf(t) === "venta",
     fab = kindOf(t) === "fabricacion",
     editable = t.status === "evaluacion";
-  const quoteView = `<div class="splithead"><h3>Detalle de cotización</h3>${editable ? '<button class="button outline sm" onclick="addLine()">＋ Ingresar nuevo ítem para cotizar</button>' : ""}</div><div class="tablebox"><table class="quote-table"><thead><tr><th>Descripción</th><th>Cant.</th><th>Precio sin IGV</th><th></th></tr></thead><tbody>${t.quote.lines.map((l, i) => `<tr><td><input class="desc" id="ld${i}" value="${esc(l.desc)}" ${editable ? "" : "disabled"} onchange="updateLine(${i})"></td><td><input type="number" id="lq${i}" min=".01" step=".01" value="${Number(l.qty)}" ${editable ? "" : "disabled"} onchange="updateLine(${i})"></td><td><input type="number" id="lp${i}" min="0" step=".01" value="${Number(l.price)}" ${editable ? "" : "disabled"} onchange="updateLine(${i})"></td><td>${editable ? `<button class="button ghost sm" onclick="removeLine(${i})">✕</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="4" class="small muted">Sin ítems registrados</td></tr>'}</tbody></table></div><div class="quotegrid" style="margin-top:14px"><div><div class="fields2"><div class="field"><label>Descuento en soles</label><input type="number" id="q-discount" min="0" step="0.01" value="${t.quote.discount || 0}" ${editable ? "" : "disabled"} onchange="updatePrice()"></div><div class="field"><label>Precio final negociado (con IGV)</label><input type="number" id="q-gross" min="0" step="0.01" placeholder="Opcional" value="${t.quote.gross ?? ""}" ${editable ? "" : "disabled"} onchange="updatePrice()"></div></div><div class="field"><label>Condiciones comerciales y garantía aplicable</label><textarea id="q-terms" ${editable ? "" : "disabled"} oninput="draftInput()">${esc(t.quote.terms)}</textarea></div></div><div class="detail"><div class="totalrow"><span>Base imponible</span><b>${fmt(money.base)}</b></div><div class="totalrow"><span>IGV 18%</span><b>${fmt(money.igv)}</b></div><div class="totalrow big"><span>TOTAL</span><span>${fmt(money.gross)}</span></div>${money.adjust ? `<small class="muted">Ajuste por precio negociado: ${fmt(money.adjust)}</small>` : ""}</div></div>`;
+  const quoteView = renderQuoteEditor(t);
   const commonActions = `<div class="row wrap" style="margin-top:15px">${editable ? `<button class="button" onclick="sendQuote()">${sale ? "Enviar cotización a aprobación" : "Enviar cotización"} →</button>` : ""}${needsEvaluation(t) ? `<button class="button outline" onclick="docPrint('eval')">↓ PDF evaluación</button>` : ""}<button class="button outline" onclick="docPrint('quote')">↓ Generar PDF cotización</button></div>`;
   if (!editable)
-    return `<div class="hint goodhint">${!needsEvaluation(t) ? "Cotización registrada" : "Evaluación y cotización registradas"}</div>${!needsEvaluation(t) ? "" : `<div class="detail"><b>Observaciones:</b> ${esc(t.eval.findings || "---")}<br><b>Correcciones:</b> ${esc(t.eval.fixes || "---")}</div><div class="sep"></div>`}${quoteView}${commonActions}`;
+    return `<div class="hint goodhint">${!needsEvaluation(t) ? "Cotización registrada" : "Evaluación y cotización registradas"}</div>${!needsEvaluation(t) ? "" : `<div class="detail"><b>Observaciones:</b> ${esc(t.eval.findings || "---")}<br><b>Correcciones:</b> ${esc(t.eval.fixes || "---")}</div><div class="sep"></div>`}${needsEvaluation(t) ? technicalDetails(t) : ""}${quoteView}${commonActions}`;
   const saleForm = `<div class="hint">Venta de producto · Disponibilidad por confirmar</div><div class="field"><label>Catálogo de productos</label><div class="row wrap"><select id="sale-preset" style="flex:1;min-width:230px"><option value="">Seleccionar producto...</option><option value="radiador451">451 · Radiador importado Freightliner Century</option></select><button class="button soft" onclick="applySalePreset()">Usar producto</button></div></div><div class="detail"><b>Producto:</b> ${esc(t.equipment)}<br><b>Código:</b> ${esc(t.productCode || "Pendiente de identificar")}<br><b>Disponibilidad:</b> por confirmar</div>`;
   const technicalForm = `<div class="hint">${fab ? "Especificaciones de fabricación" : "Diagnóstico técnico"}</div><div class="fields2"><div class="field"><label>Condiciones de ingreso</label><textarea id="ev-condition" oninput="draftInput()">${esc(t.eval.condition)}</textarea></div><div class="field"><label>${fab ? "Especificaciones y medidas detectadas" : "Observaciones del técnico"}</label><textarea id="ev-findings" oninput="draftInput()" placeholder="${fab ? "Dimensiones, planos, material y requerimientos" : "Ej.: fuga visible en panal del intercooler"}">${esc(t.eval.findings)}</textarea></div></div><div class="field"><label>Procedimiento técnico</label><div class="row wrap"><select id="tech-preset" style="flex:1;min-width:240px"><option value="">Seleccionar procedimiento...</option>${Object.entries(
     TECH_PRESETS,
@@ -750,7 +750,7 @@ function renderEvaluationView(t, money) {
     .join(
       "",
     )}</select><button class="button soft" onclick="applyTechnicalPreset()">Agregar propuesta</button></div><p class="small" style="margin:5px 0"></p></div><div class="field"><label>Corrección o procedimiento propuesto</label><textarea id="ev-fixes" oninput="draftInput()" placeholder="Procesos técnicos aplicables y aprobados">${esc(t.eval.fixes)}</textarea></div><div class="field"><label>Evidencia fotográfica (opcional)</label><input type="file" accept="image/*" id="ev-photo" onchange="addPhoto(this)"><div class="photo-row">${t.eval.photos.map((src) => `<img src="${src}" alt="Evidencia">`).join("")}</div></div>`;
-  return `${sale ? saleForm : needsEvaluation(t) ? technicalForm : `<div class="hint goodhint">Cotización directa · No requiere evaluación ni recepción física. ${needsWorkOrder(t) ? "Incluye OT tras la aprobación." : "Sin OT: entrega o conformidad y cobro tras la aprobación."}</div>`}<div class="sep"></div>${quoteView}${commonActions}`;
+  return `${sale ? saleForm : needsEvaluation(t) ? technicalForm + technicalDetails(t) : `<div class="hint goodhint">Cotización directa · No requiere evaluación ni recepción física. ${needsWorkOrder(t) ? "Incluye OT tras la aprobación." : "Sin OT: entrega o conformidad y cobro tras la aprobación."}</div>`}<div class="sep"></div>${quoteView}${commonActions}`;
 }
 function applyTechnicalPreset() {
   const t = ticket(modal),
@@ -789,6 +789,8 @@ function applySalePreset() {
   t.quote.lines = [{ desc: p.description, qty: 1, price: p.price }];
   t.quote.discount = 0;
   t.quote.gross = null;
+  t.quote.pricingMode = "items";
+  t.quote.pricingReview = false;
   t.quote.terms = p.terms;
   save();
   tab = "evaluacion";
