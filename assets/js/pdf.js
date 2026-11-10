@@ -323,7 +323,15 @@ function buildLexsanPDF(t, c, kind) {
       false,
       PDF_GRAY,
     );
-    pdf.text(documentType, 550, 44, 15, true, PDF_BLACK, "right");
+    pdf.text(
+      documentType,
+      550,
+      44,
+      Math.min(14, 190 / pdf.measure(documentType, 1, true)),
+      true,
+      PDF_BLACK,
+      "right",
+    );
     pdf.text(number, 550, 61, 9, true, PDF_ORANGE, "right");
     pdf.text(
       "Fecha: " +
@@ -337,14 +345,28 @@ function buildLexsanPDF(t, c, kind) {
     );
     pdf.line(44, 103, 551, 103, [0.89, 0.89, 0.89]);
     if (!continuePage) {
-      pdf.rect(44, 117, 248, 77, PDF_LIGHT);
-      pdf.rect(302, 117, 249, 77, PDF_LIGHT);
+      const customerLines = pdf.lines(c.name, 224, 10.2, true),
+        equipmentLines = pdf.lines(t.equipment, 220, 9.9, true);
+      const serialText =
+        (kindOf(t) === "venta" ? "Código: " : "Placa / serie: ") +
+        (t.productCode || t.serial || "No indicada");
+      const serialLines = pdf.lines(serialText, 220, 8.5);
+      const boxHeight = Math.max(
+        82,
+        42 +
+          Math.max(customerLines.length, equipmentLines.length) * 12 +
+          serialLines.length * 11 +
+          10,
+      );
+      const identityY = 117 + boxHeight - 12 - (serialLines.length - 1) * 11;
+      pdf.rect(44, 117, 248, boxHeight, PDF_LIGHT);
+      pdf.rect(302, 117, 249, boxHeight, PDF_LIGHT);
       pdf.text("CLIENTE", 56, 132, 8.2, true, PDF_ORANGE);
       pdf.paragraph(c.name, 56, 148, 224, 10.2, 12, PDF_BLACK, true);
       pdf.text(
         (c.type === "dni" ? "DNI" : "RUC") + ": " + (c.id || "---"),
         56,
-        180,
+        identityY,
         8.7,
         false,
         PDF_GRAY,
@@ -360,17 +382,28 @@ function buildLexsanPDF(t, c, kind) {
         PDF_ORANGE,
       );
       pdf.paragraph(t.equipment, 314, 148, 220, 9.9, 12, PDF_BLACK, true);
-      pdf.text(
-        kindOf(t) === "venta"
-          ? "Código: " + (t.productCode || t.serial || "No indicado")
-          : "Placa / serie: " + (t.serial || "No indicada"),
-        314,
-        180,
-        8.5,
-        false,
-        PDF_GRAY,
+      pdf.paragraph(serialText, 314, identityY, 220, 8.5, 11, PDF_GRAY);
+      y = 117 + boxHeight + 18;
+      paragraph(
+        "Referencia: " +
+          cid(t.id) +
+          " | " +
+          (kindOf(t) === "cotizacion" ? "Solicitud: " : "Ingreso: ") +
+          t.received,
+        8.4,
+        12,
       );
-      y = 213;
+      if (c.contact || c.email || c.phone)
+        paragraph(
+          "Contacto: " +
+            (c.contact || "No registrado") +
+            " | Tel.: " +
+            (c.phone || "No registrado") +
+            " | Correo: " +
+            (c.email || "No registrado"),
+          8.1,
+          11,
+        );
     } else {
       pdf.text("Continuación · " + cid(t.id), 44, 122, 9, false, PDF_GRAY);
       y = 142;
@@ -411,6 +444,14 @@ function buildLexsanPDF(t, c, kind) {
   }
   header();
   if (kind === "quote") {
+    paragraph(
+      "Moneda: soles (PEN). Precios unitarios e importes de ítems SIN IGV. " +
+        (priceMode(t.quote) === "agreed"
+          ? "Total acordado con IGV; ajuste comercial detallado al pie."
+          : "El IGV se agrega en el resumen."),
+      8.5,
+      12,
+    );
     title(
       kindOf(t) === "venta"
         ? "PRODUCTO COTIZADO"
@@ -420,64 +461,81 @@ function buildLexsanPDF(t, c, kind) {
       pdf.rect(mLeft, y, tableWidth, 26, PDF_BLACK);
       pdf.text("DESCRIPCIÓN / ALCANCE", 54, y + 17, 8.4, true, [1, 1, 1]);
       pdf.text("CANT.", 365, y + 17, 8.4, true, [1, 1, 1], "right");
-      pdf.text("P. UNITARIO", 451, y + 17, 8.4, true, [1, 1, 1], "right");
-      pdf.text("IMPORTE", 539, y + 17, 8.4, true, [1, 1, 1], "right");
+      pdf.text("P. UNIT. SIN IGV", 451, y + 17, 7.5, true, [1, 1, 1], "right");
+      pdf.text("IMPORTE SIN IGV", 539, y + 17, 7.5, true, [1, 1, 1], "right");
       y += 26;
     }
     tableHeader();
     for (const item of t.quote.lines) {
-      const desc = pdf.lines(item.desc, 292, 9.3),
-        rowH = Math.max(29, desc.length * 13 + 13);
-      if (y + rowH > 730) {
-        footer();
-        header(true);
-        tableHeader();
+      const desc = pdf.lines(
+        (item.category ? item.category + " / " : "") + item.desc,
+        292,
+        9.3,
+      );
+      let offset = 0;
+      while (offset < desc.length) {
+        if (y + 29 > 730) {
+          footer();
+          header(true);
+          tableHeader();
+        }
+        const count = Math.min(
+            desc.length - offset,
+            Math.max(1, Math.floor((730 - y - 13) / 13)),
+          ),
+          rowH = Math.max(29, count * 13 + 13);
+        pdf.rect(mLeft, y, tableWidth, rowH, [0.997, 0.997, 0.997]);
+        pdf.line(mLeft, y + rowH, mRight, y + rowH, [0.9, 0.9, 0.9]);
+        for (let i = 0; i < count; i++)
+          pdf.text(desc[offset + i], 54, y + 17 + i * 13, 9.3);
+        if (offset === 0) {
+          pdf.text(
+            String(item.qty),
+            365,
+            y + 17,
+            9.2,
+            false,
+            PDF_BLACK,
+            "right",
+          );
+          pdf.text(
+            fmt(item.price),
+            451,
+            y + 17,
+            9.2,
+            false,
+            PDF_BLACK,
+            "right",
+          );
+          pdf.text(
+            fmt(round(item.qty * item.price)),
+            539,
+            y + 17,
+            9.2,
+            true,
+            PDF_BLACK,
+            "right",
+          );
+        } else
+          pdf.text("(continuación)", 539, y + 17, 8, false, PDF_GRAY, "right");
+        offset += count;
+        y += rowH;
       }
-      pdf.rect(mLeft, y, tableWidth, rowH, [0.997, 0.997, 0.997]);
-      pdf.line(mLeft, y + rowH, mRight, y + rowH, [0.9, 0.9, 0.9]);
-      for (let i = 0; i < desc.length; i++)
-        pdf.text(desc[i], 54, y + 17 + i * 13, 9.3);
-      pdf.text(String(item.qty), 365, y + 17, 9.2, false, PDF_BLACK, "right");
-      pdf.text(
-        fmt(Number(item.price)),
-        451,
-        y + 17,
-        9.2,
-        false,
-        PDF_BLACK,
-        "right",
-      );
-      pdf.text(
-        fmt(round(Number(item.qty) * Number(item.price))),
-        539,
-        y + 17,
-        9.2,
-        true,
-        PDF_BLACK,
-        "right",
-      );
-      y += rowH;
-    }
-    if (v.adjust) {
-      room(36);
-      pdf.text("Ajuste de precio negociado", 54, y + 18, 9.1);
-      pdf.text(fmt(v.adjust), 539, y + 18, 9.1, false, PDF_BLACK, "right");
-      pdf.line(44, y + 31, 551, y + 31, [0.89, 0.89, 0.89]);
-      y += 35;
     }
     y += 16;
-    room(141);
+    room(v.adjust ? 177 : 155);
     function moneyRow(label, value, bold = false) {
-      pdf.text(label, 396, y + 14, 9.3, bold);
+      pdf.text(label, 310, y + 14, 9.3, bold);
       pdf.text(fmt(value), 539, y + 14, 9.3, bold, PDF_BLACK, "right");
       y += 22;
     }
-    moneyRow("Subtotal", v.sum);
-    moneyRow("Descuento", v.discount);
-    moneyRow("Base imponible", v.base);
+    moneyRow("Suma de ítems sin IGV", v.sum);
+    moneyRow("Descuento sin IGV", -v.discount);
+    if (v.adjust) moneyRow("Ajuste comercial sin IGV", v.adjust);
+    moneyRow("Neto sin IGV (base imponible)", v.base);
     moneyRow("IGV (18%)", v.igv);
-    pdf.rect(387, y, 164, 35, PDF_ORANGE);
-    pdf.text("TOTAL", 398, y + 23, 10.5, true, [1, 1, 1]);
+    pdf.rect(300, y, 251, 35, PDF_ORANGE);
+    pdf.text("TOTAL CON IGV", 310, y + 23, 10.5, true, [1, 1, 1]);
     pdf.text(fmt(v.gross), 541, y + 23, 12, true, [1, 1, 1], "right");
     y += 46;
     title("CONDICIONES COMERCIALES");
@@ -502,16 +560,49 @@ function buildLexsanPDF(t, c, kind) {
     }
     footer();
   } else if (kind === "eval") {
-    title("DIAGNÓSTICO Y EVALUACIÓN DEL RADIADOR");
+    title("INFORME DE EVALUACIÓN TÉCNICA");
+    paragraph(
+      "Tipo de atención: " +
+        (t.maintenance || kindLabels[kindOf(t)]) +
+        " | Técnico: " +
+        (t.work.responsible || "No asignado"),
+      9,
+      13,
+    );
+    paragraph(
+      t.eval.findings && t.eval.fixes
+        ? "Diagnóstico registrado. Alcance sujeto a la aprobación de la cotización."
+        : "INFORME EN BORRADOR: falta completar diagnóstico o procedimiento propuesto.",
+      8.7,
+      12,
+    );
     for (const [name, body] of [
-      ["CONDICIONES DE RECEPCIÓN", t.eval.condition],
-      ["OBSERVACIONES DEL TÉCNICO", t.eval.findings],
-      ["CORRECCIONES RECOMENDADAS", t.eval.fixes],
+      ["01 / CONDICIÓN DEL EQUIPO AL INGRESO", t.eval.condition],
+      ["02 / HALLAZGOS Y FALLAS OBSERVADAS", t.eval.findings],
+      ["03 / INSPECCIONES Y ENSAYOS REALIZADOS", t.eval.method],
+      [
+        "04 / CONDICIONES Y RESULTADOS DE PRUEBA",
+        [t.eval.conditions, t.eval.result].filter(Boolean).join("\n"),
+      ],
+      ["05 / PROCEDIMIENTO PROPUESTO", t.eval.fixes],
+      ["06 / RECOMENDACIONES Y LIMITACIONES", t.eval.recommendations],
     ]) {
       title(name);
-      paragraph(body || "Información pendiente de registrar.");
+      paragraph(
+        body ||
+          "No registrado. No se presume la ejecución de pruebas ni resultados.",
+      );
+    }
+    const resources = t.quote.lines.filter((l) =>
+      ["Repuesto", "Mano de obra"].includes(l.category),
+    );
+    if (resources.length) {
+      title("RECURSOS PROPUESTOS (SIN PRECIOS)");
+      for (const l of resources)
+        paragraph(l.category + ": " + l.desc + " | Cantidad: " + l.qty, 9, 13);
     }
     if (t.eval.photos?.length) {
+      room(270);
       title("EVIDENCIA FOTOGRÁFICA");
       let count = 0;
       for (let s of t.eval.photos) {
@@ -523,12 +614,28 @@ function buildLexsanPDF(t, c, kind) {
           ratio = im.w / im.h,
           w = Math.min(maxW, maxH * ratio),
           h = w / ratio;
-        room(h + 30);
+        room(h + 44);
+        pdf.text(
+          "Fotografía " + count + " / Evidencia del equipo",
+          48,
+          y + 10,
+          8.5,
+          false,
+          PDF_GRAY,
+        );
+        y += 18;
         pdf.placeImage(name, 48, y, w, h);
         y += h + 17;
       }
     }
-    room(35);
+    if (!t.eval.photos?.length) {
+      title("EVIDENCIA FOTOGRÁFICA");
+      paragraph("Sin fotografías adjuntas.");
+    }
+    room(85);
+    pdf.line(48, y + 30, 260, y + 30);
+    pdf.text("Responsable de la evaluación", 48, y + 44, 8.5, false, PDF_GRAY);
+    y += 52;
     pdf.text(
       "Documento técnico descriptivo. No sustituye la autorización comercial del cliente.",
       48,
