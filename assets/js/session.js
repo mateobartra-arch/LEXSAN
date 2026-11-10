@@ -9,6 +9,7 @@ const commercialCommands = [
   "removeLine",
   "updateLine",
   "updatePrice",
+  "setPricingMode",
   "updateTerms",
   "applyTechnicalPreset",
   "applySalePreset",
@@ -30,6 +31,7 @@ const commercialCommands = [
 ];
 const technicalCommands = [
   "draftInput",
+  "saveTechnicalDetails",
   "attachImage",
   "addPhoto",
   "startWork",
