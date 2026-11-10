@@ -13,7 +13,12 @@
       discount = money(q.discount || 0);
     let base = money(sum - discount),
       gross = money(base * 1.18);
-    if (q.gross !== null && q.gross !== "" && q.gross !== undefined) {
+    if (
+      q.pricingMode !== "items" &&
+      q.gross !== null &&
+      q.gross !== "" &&
+      q.gross !== undefined
+    ) {
       gross = money(q.gross);
       base = money(gross / 1.18);
     }
@@ -27,6 +32,16 @@
     };
   }
   function quoteError(q) {
+    if (q.pricingReview)
+      return "Revisa el total anterior: elige cálculo por ítems o confirma el total acordado.";
+    if (
+      q.pricingMode === "agreed" &&
+      (q.gross === null ||
+        q.gross === "" ||
+        !Number.isFinite(Number(q.gross)) ||
+        Number(q.gross) <= 0)
+    )
+      return "Ingresa un total acordado válido, incluido IGV.";
     if (!q.lines?.length) return "Agrega al menos un ítem.";
     if (
       q.lines.some(
@@ -51,12 +66,29 @@
     if (!data || !Array.isArray(data.clients) || !Array.isArray(data.tickets))
       throw Error("Formato de datos no válido");
     data.inventory ||= [];
-    data.schemaVersion = 3;
+    data.schemaVersion = 4;
     data.next = Math.max(
       Number(data.next) || 1,
       ...data.tickets.map((t) => Number(t.id) + 1),
     );
     for (const t of data.tickets) {
+      if (!t.quote.pricingMode) {
+        const hasTotal =
+          t.quote.gross !== null &&
+          t.quote.gross !== "" &&
+          t.quote.gross !== undefined;
+        const calculated = quoteTotals({
+          ...t.quote,
+          pricingMode: "items",
+        }).gross;
+        t.quote.pricingMode = hasTotal ? "agreed" : "items";
+        if (
+          hasTotal &&
+          t.status === "evaluacion" &&
+          Math.abs(calculated - Number(t.quote.gross)) > 0.02
+        )
+          t.quote.pricingReview = true;
+      }
       t.events ||= [];
       t.payments ||= [];
       t.receipts ||= [];
