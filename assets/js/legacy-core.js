@@ -63,10 +63,10 @@ const fresh = () => ({
     {
       id: "20456091033",
       type: "ruc",
-      name: "TRANS VILAC EIRL",
-      contact: "Ing. Haslon",
+      name: "TRANSPORTES DEMO S.A.C.",
+      contact: "Contacto de demostración",
       email: "",
-      phone: "942660460",
+      phone: "000000000",
     },
     {
       id: "20999999990",
