@@ -11,11 +11,12 @@ function quotationSummary(t) {
   return `<div class="quote-total-label">${agreed ? "TOTAL ACORDADO CON EL CLIENTE" : "TOTAL A COTIZAR"}</div><div class="quote-total-amount">${fmt(v.gross)}</div><p class="small">Incluye IGV del 18%</p><div class="sep"></div><div class="totalrow"><span>Suma de ítems sin IGV</span><b>${fmt(v.sum)}</b></div>${v.discount ? `<div class="totalrow"><span>Descuento sin IGV</span><b>− ${fmt(v.discount)}</b></div>` : ""}${v.adjust ? `<div class="totalrow quote-adjust"><span>${v.adjust > 0 ? "Aumento" : "Reducción"} para llegar al total acordado</span><b>${v.adjust > 0 ? "+" : "−"} ${fmt(Math.abs(v.adjust))}</b></div>` : ""}<div class="totalrow"><span>Neto sin IGV <small>(base imponible)</small></span><b>${fmt(v.base)}</b></div><div class="totalrow"><span>IGV · 18%</span><b>${fmt(v.igv)}</b></div><div class="quote-equation">${fmt(v.base)} + ${fmt(v.igv)} de IGV = <strong>${fmt(v.gross)}</strong></div>${agreed ? '<p class="quote-mode-note">El total acordado reemplaza el total calculado por ítems. El ajuste se muestra aquí y en el PDF.</p>' : '<p class="quote-mode-note">El total se calcula automáticamente. Ingresa los precios unitarios sin IGV.</p>'}`;
 }
 function renderQuoteEditor(t) {
+  if (t.status === "evaluacion") LexDomain.useBasePrices(t.quote);
   const editable = t.status === "evaluacion",
     q = t.quote,
     agreed = priceMode(q) === "agreed";
   const calculated = LexDomain.quoteTotals({ ...q, pricingMode: "items" });
-  return `<section class="quote-editor"><div class="quote-heading"><div><span class="eyebrow">PRESUPUESTO</span><h3>¿Qué vas a cotizar?</h3><p>Agrega productos o servicios. Los precios de cada ítem se ingresan <strong>sin IGV</strong>.</p></div>${editable ? '<button class="button outline" onclick="addLine()">＋ Ingresar nuevo ítem para cotizar</button>' : ""}</div><div class="quote-items">${q.lines.map((l, i) => `<article class="quote-item"><div class="row between"><span class="tag">Ítem ${i + 1}</span>${editable ? `<button class="button ghost sm" aria-label="Quitar ítem ${i + 1}" onclick="removeLine(${i})">Quitar ×</button>` : ""}</div><label for="ld${i}">Descripción del producto o servicio</label><input class="desc" id="ld${i}" maxlength="1500" value="${esc(l.desc)}" ${editable ? "" : "disabled"} oninput="updateLine(${i})" placeholder="Ej.: Limpieza y prueba de estanqueidad"><div class="quote-item-numbers"><div><label for="lq${i}">Cantidad</label><input type="number" inputmode="decimal" required id="lq${i}" min="0.01" step="0.01" value="${l.qty}" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></div><div><label for="lp${i}">Precio unitario sin IGV (S/)</label><input type="number" inputmode="decimal" required id="lp${i}" min="0" step="0.01" value="${l.price}" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></div><div class="quote-line-total"><span>Importe sin IGV</span><b id="line-total-${i}">${fmt(round(l.qty * l.price))}</b></div></div><details class="quote-item-details"><summary>Tipo de ítem: ${esc(l.category || "Servicio")}</summary><select aria-label="Tipo de ítem ${i + 1}" ${editable ? "" : "disabled"} onchange="setLineCategory(${i},this.value);this.closest('details').querySelector('summary').textContent='Tipo de ítem: '+this.value">${["Servicio", "Repuesto", "Mano de obra", "Producto nuevo"].map((c) => `<option ${l.category === c ? "selected" : ""}>${c}</option>`).join("")}</select></details></article>`).join("") || '<div class="quote-empty">Aún no hay ítems. Agrega el primer producto o servicio para calcular el presupuesto.</div>'}</div><div id="quote-input-error" class="quote-input-error" role="alert"></div>${q.pricingReview ? `<div class="quote-review"><h3>Hay un total anterior que necesita revisión</h3><p>Los ítems calculan ${fmt(calculated.gross)} con IGV, pero quedó guardado ${fmt(q.gross)}. No se cambiará sin tu elección.</p><div class="row"><button class="button" onclick="setPricingMode('items')">Usar ${fmt(calculated.gross)} calculados</button><button class="button outline" onclick="setPricingMode('agreed')">Confirmar ${fmt(q.gross)} acordados</button></div></div>` : ""}<div class="quotegrid"><div><div class="field"><label for="q-discount">Descuento sobre los ítems (S/, sin IGV)</label><input type="number" inputmode="decimal" id="q-discount" min="0" step="0.01" required value="${q.discount || 0}" ${editable ? "" : "disabled"} oninput="updatePrice()"><p class="small">Se resta antes de calcular el IGV. Usa 0 si no aplica.</p></div><details class="quote-agreement" ${agreed ? "open" : ""}><summary>¿Acordaste otro total con el cliente?</summary><div class="field"><label for="q-pricing-mode">Forma de calcular el presupuesto</label><select id="q-pricing-mode" ${editable ? "" : "disabled"} onchange="setPricingMode(this.value)"><option value="items" ${!agreed ? "selected" : ""}>Automático: ítems + IGV</option><option value="agreed" ${agreed ? "selected" : ""}>Usar un total acordado, incluido IGV</option></select></div><div class="field" ${agreed ? "" : "hidden"}><label for="q-gross">Total acordado con IGV incluido (S/)</label><input id="q-gross" type="number" inputmode="decimal" min="0.01" step="0.01" value="${q.gross ?? ""}" ${editable && agreed ? "required" : "disabled"} oninput="updatePrice()"><p class="small">Este importe será el total a pagar. Cualquier diferencia con los ítems aparecerá como ajuste comercial.</p></div></details><div class="field" style="margin-top:18px"><label for="q-terms">Entrega, forma de pago y garantía</label><textarea id="q-terms" ${editable ? "" : "disabled"} oninput="draftInput()">${esc(q.terms)}</textarea></div></div><aside id="quote-summary" class="detail quote-summary" aria-live="polite">${quotationSummary(t)}</aside></div></section>`;
+  return `<section class="quote-editor"><div class="quote-heading"><div><span class="eyebrow">PRESUPUESTO</span><h3>¿Qué vas a cotizar?</h3><p>Agrega productos o servicios. Los precios de cada ítem se ingresan <strong>sin IGV</strong>.</p></div>${editable ? '<button class="button outline" onclick="addLine()">＋ Ingresar nuevo ítem para cotizar</button>' : ""}</div><div class="quote-items">${q.lines.map((l, i) => `<article class="quote-item"><div class="row between"><span class="tag">Ítem ${i + 1}</span>${editable ? `<button class="button ghost sm" aria-label="Quitar ítem ${i + 1}" onclick="removeLine(${i})">Quitar ×</button>` : ""}</div><label for="ld${i}">Descripción del producto o servicio</label><input class="desc" id="ld${i}" maxlength="1500" value="${esc(l.desc)}" ${editable ? "" : "disabled"} oninput="updateLine(${i})" placeholder="Ej.: Limpieza y prueba de estanqueidad"><div class="quote-item-numbers"><div><label for="lq${i}">Cantidad</label><input type="number" inputmode="decimal" required id="lq${i}" min="0.01" step="0.01" value="${l.qty}" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></div><div><label for="lp${i}">Precio unitario sin IGV (S/)</label><input type="number" inputmode="decimal" required id="lp${i}" min="0" step="0.01" value="${l.price}" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></div><div class="quote-line-total"><span>Importe sin IGV</span><b id="line-total-${i}">${fmt(round(l.qty * l.price))}</b></div></div><details class="quote-item-details"><summary>Tipo de ítem: ${esc(l.category || "Servicio")}</summary><select aria-label="Tipo de ítem ${i + 1}" ${editable ? "" : "disabled"} onchange="setLineCategory(${i},this.value);this.closest('details').querySelector('summary').textContent='Tipo de ítem: '+this.value">${["Servicio", "Repuesto", "Mano de obra", "Producto nuevo"].map((c) => `<option ${l.category === c ? "selected" : ""}>${c}</option>`).join("")}</select></details></article>`).join("") || '<div class="quote-empty">Aún no hay ítems. Agrega el primer producto o servicio para calcular el presupuesto.</div>'}</div><div id="quote-input-error" class="quote-input-error" role="alert"></div><div class="quotegrid"><div><div class="field"><label for="q-discount">Descuento sobre los ítems (S/, sin IGV)</label><input type="number" inputmode="decimal" id="q-discount" min="0" step="0.01" required value="${q.discount || 0}" ${editable ? "" : "disabled"} oninput="updatePrice()"><p class="small">Se resta antes de calcular el IGV. Usa 0 si no aplica.</p></div><div class="field" style="margin-top:18px"><label for="q-terms">Entrega, forma de pago y garantía</label><textarea id="q-terms" ${editable ? "" : "disabled"} oninput="draftInput()">${esc(q.terms)}</textarea></div></div><aside id="quote-summary" class="detail quote-summary" aria-live="polite">${quotationSummary(t)}</aside></div></section>`;
 }
 function quoteFieldError() {
   const area = document.querySelector(".quote-editor");
@@ -35,6 +36,11 @@ function quoteFieldError() {
 }
 function showQuoteError(message) {
   const el = document.getElementById("quote-input-error");
+  const summary = document.getElementById("quote-summary");
+  if (summary)
+    summary.innerHTML = message
+      ? '<p class="quote-input-error">Completa o corrige los precios y cantidades para calcular el total.</p>'
+      : quotationSummary(ticket(modal));
   if (el) {
     el.textContent = message;
     el.hidden = !message;
@@ -52,6 +58,7 @@ updateLine = function (i) {
     price = document.getElementById("lp" + i),
     desc = document.getElementById("ld" + i);
   if (!qty.checkValidity() || !price.checkValidity()) {
+    document.getElementById("line-total-" + i).textContent = "—";
     showQuoteError(
       "La cantidad debe ser positiva y el precio no puede ser negativo. Completa ambos campos.",
     );
@@ -63,7 +70,8 @@ updateLine = function (i) {
     qty: Number(qty.value),
     price: round(price.value),
   };
-  t.quote.pricingMode = priceMode(t.quote);
+  LexDomain.useBasePrices(t.quote);
+  t.quote.pricingMode = "items";
   if (t.quote.pricingMode === "items") t.quote.gross = null;
   document.getElementById("line-total-" + i).textContent = fmt(
     round(qty.value * price.value),
@@ -75,19 +83,17 @@ updateLine = function (i) {
 updatePrice = function () {
   const t = ticket(modal);
   if (t.status !== "evaluacion") return;
-  const discount = document.getElementById("q-discount"),
-    gross = document.getElementById("q-gross"),
-    agreed = priceMode(t.quote) === "agreed";
-  if (!discount.checkValidity() || (agreed && !gross.checkValidity())) {
-    showQuoteError(
-      "Completa el descuento y un total acordado positivo, si elegiste esa opción.",
-    );
+  const discount = document.getElementById("q-discount");
+  if (!discount.checkValidity()) {
+    showQuoteError("Ingresa un descuento válido sin IGV. Usa 0 si no aplica.");
     return;
   }
   const proposed = {
     ...t.quote,
     discount: round(discount.value),
-    gross: agreed ? round(gross.value) : null,
+    pricingMode: "items",
+    gross: null,
+    pricingReview: false,
   };
   const values = LexDomain.quoteTotals(proposed);
   if (proposed.discount < 0 || proposed.discount > values.sum) {
@@ -101,17 +107,8 @@ updatePrice = function () {
 };
 function setPricingMode(mode) {
   const t = ticket(modal);
-  if (t.status !== "evaluacion" || !["items", "agreed"].includes(mode)) return;
-  const prior = calc(t).gross;
-  t.quote.pricingMode = mode;
-  t.quote.gross = mode === "items" ? null : (t.quote.gross ?? prior);
-  t.quote.pricingReview = false;
-  event(
-    t,
-    mode === "items"
-      ? "Cotización: cálculo automático por ítems e IGV."
-      : "Cotización: total acordado con IGV confirmado.",
-  );
+  if (!t || t.status !== "evaluacion" || mode !== "items") return;
+  LexDomain.useBasePrices(t.quote);
   save();
   renderTicketModal();
 }

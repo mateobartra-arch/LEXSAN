@@ -62,11 +62,19 @@
       return "El total debe ser un importe positivo.";
     return "";
   }
+  function useBasePrices(q) {
+    if (q.pricingMode !== "items" && q.gross != null && q.gross !== "")
+      q.previousAgreedGross ??= q.gross;
+    q.pricingMode = "items";
+    q.gross = null;
+    q.pricingReview = false;
+    return q;
+  }
   function migrate(data) {
     if (!data || !Array.isArray(data.clients) || !Array.isArray(data.tickets))
       throw Error("Formato de datos no válido");
     data.inventory ||= [];
-    data.schemaVersion = 4;
+    data.schemaVersion = 5;
     data.next = Math.max(
       Number(data.next) || 1,
       ...data.tickets.map((t) => Number(t.id) + 1),
@@ -89,6 +97,7 @@
         )
           t.quote.pricingReview = true;
       }
+      if (t.status === "evaluacion") useBasePrices(t.quote);
       t.events ||= [];
       t.payments ||= [];
       t.receipts ||= [];
@@ -133,7 +142,15 @@
         : null,
     };
   }
-  const api = { money, localDate, quoteTotals, quoteError, migrate, report };
+  const api = {
+    money,
+    localDate,
+    quoteTotals,
+    quoteError,
+    useBasePrices,
+    migrate,
+    report,
+  };
   root.LexDomain = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
