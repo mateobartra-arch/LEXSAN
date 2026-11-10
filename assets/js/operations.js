@@ -357,7 +357,7 @@ function addStockLine() {
     price: p.price,
     stockCode: p.code,
   });
-  t.quote.gross = null;
+  // Respect an explicitly agreed total; the visible summary reconciles the new item.
   save();
   renderTicketModal();
 }
