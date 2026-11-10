@@ -1,0 +1,176 @@
+[hidden] {
+  display: none !important;
+}
+:root {
+  --ink: #191e26;
+  --bg: #f5f6f7;
+}
+.rail {
+  background: #15191f;
+  overflow-y: auto;
+}
+.nav[hidden],
+button[hidden] {
+  display: none !important;
+}
+.rail-bottom {
+  order: 99;
+}
+.rail .nav {
+  min-height: 44px;
+}
+.metricgrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.metric .money-metric {
+  font-size: 23px;
+}
+.save-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 38px;
+  background: #fffaf4;
+  border-bottom: 1px solid #f0e3d2;
+  font-size: 12px;
+  color: #765a3e;
+}
+.save-strip .error {
+  color: #b42318;
+  font-weight: 750;
+}
+.ot-header {
+  padding: 18px;
+  background: #f5f7fa;
+  border-left: 4px solid var(--orange);
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+.ot-header h2 {
+  margin: 6px 0;
+}
+.ot-header .button {
+  margin-top: 12px;
+}
+input:not([type]),
+input[type="password"] {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #dce3ea;
+  border-radius: 9px;
+  color: var(--ink);
+}
+.camera-control {
+  border: 1px dashed #d8dfe6;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fafbfc;
+}
+.camera-control input {
+  max-width: 100%;
+  font-size: 12px;
+}
+.camera-control label {
+  font-size: 13px;
+  color: #26384a;
+}
+.auth-screen {
+  max-width: 450px;
+  margin: 10vh auto;
+  padding: 28px;
+}
+.auth-screen h1 {
+  margin-bottom: 12px;
+}
+.auth-screen .field {
+  margin-top: 16px;
+}
+.top-actions .profile {
+  max-width: 240px;
+}
+.splithead {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.modal p,
+.modal dd {
+  overflow-wrap: anywhere;
+}
+.nav:focus-visible,
+.button:focus-visible,
+.xbtn:focus-visible {
+  outline: 3px solid #f7946b;
+  outline-offset: 2px;
+}
+.technical-mode .quotegrid,
+.technical-mode .quote-table {
+  display: none;
+}
+.technical-mode .metricgrid,
+.technical-mode .dashboard-side {
+  display: none;
+}
+@media (max-width: 950px) and (min-width: 691px) {
+  .rail .nav {
+    font-size: 10px;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .rail .nav svg {
+    height: 20px;
+    width: 20px;
+  }
+}
+@media (max-width: 690px) {
+  .metricgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .metric .money-metric {
+    font-size: 20px;
+  }
+  .save-strip {
+    padding: 8px 14px;
+    flex-wrap: wrap;
+    gap: 3px;
+    font-size: 11px;
+  }
+  .topbar {
+    height: auto;
+    min-height: 64px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+  }
+  .top-actions {
+    margin-left: auto;
+  }
+  .top-actions .profile {
+    max-width: 190px;
+  }
+  .rail {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .nav {
+    flex: none !important;
+  }
+  .modal {
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+  .modal-body .row > select {
+    min-width: 0 !important;
+  }
+  .camera-control input {
+    font-size: 13px;
+  }
+  .modal-nav {
+    position: relative;
+  }
+  .auth-screen {
+    margin: 30px 14px;
+  }
+  .modal .photo-row img {
+    max-width: 110px;
+  }
+}

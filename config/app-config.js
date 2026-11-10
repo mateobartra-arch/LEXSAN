@@ -1,0 +1,1 @@
+window.LEXSAN_CONFIG = {mode:"local",firebase:null,demo:true};
