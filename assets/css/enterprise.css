@@ -1,6 +1,290 @@
 [hidden] {
   display: none !important;
 }
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.hero .button.outline {
+  background: transparent;
+  color: #fff;
+  border-color: #94a0af;
+}
+@media (max-width: 690px) {
+  .rail .nav {
+    width: auto;
+    min-width: auto;
+    flex: 0 0 auto !important;
+  }
+}
+.home-brand img {
+  width: 76px;
+  height: 82px;
+  object-fit: contain;
+  padding: 7px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px #0002;
+}
+.home-brand span {
+  font-size: 25px;
+  font-weight: 850;
+  letter-spacing: 1px;
+  color: white;
+}
+.home-brand small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 1.6px;
+  margin-top: 3px;
+}
+.quote-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0;
+}
+.quote-heading h3 {
+  font-size: 20px;
+  margin: 5px 0;
+}
+.quote-heading p {
+  max-width: 500px;
+  font-size: 13px;
+}
+.quote-items {
+  display: grid;
+  gap: 12px;
+}
+.quote-item {
+  border: 1px solid #dce4ec;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+}
+.quote-item > label {
+  margin-top: 12px;
+}
+.quote-item input {
+  min-height: 46px;
+}
+.quote-item-numbers {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.6fr) minmax(170px, 1fr) minmax(
+      160px,
+      1fr
+    );
+  align-items: end;
+  gap: 14px;
+  margin-top: 12px;
+}
+.quote-line-total {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f5f7fa;
+  text-align: right;
+  min-height: 65px;
+}
+.quote-line-total span {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+}
+.quote-line-total b {
+  display: block;
+  font-size: 18px;
+  color: #26384a;
+  margin-top: 3px;
+}
+.quote-item-details {
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 12px;
+}
+.quote-item-details select {
+  margin-top: 10px;
+}
+.quote-empty {
+  padding: 26px;
+  text-align: center;
+  border: 1px dashed #c9d3df;
+  border-radius: 12px;
+  color: #64748b;
+}
+.quote-editor .quotegrid {
+  margin-top: 18px;
+  align-items: start;
+  grid-template-columns: 1fr minmax(310px, 0.85fr);
+}
+.quote-summary {
+  background: #fff9f5;
+  border: 1px solid #f1cbb7;
+  padding: 22px;
+  position: sticky;
+  top: 12px;
+}
+.quote-total-label {
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  font-weight: 800;
+  color: #87432a;
+}
+.quote-total-amount {
+  font-size: 34px;
+  font-weight: 850;
+  letter-spacing: -1px;
+  color: #c7471e;
+  margin: 6px 0;
+}
+.quote-summary .totalrow {
+  font-size: 13px;
+  gap: 12px;
+  align-items: center;
+}
+.quote-summary .totalrow b {
+  white-space: nowrap;
+}
+.quote-summary small {
+  font-size: 10px;
+  display: block;
+  color: #667688;
+}
+.quote-adjust {
+  color: #9b4926;
+  background: #ffeddf;
+  border-radius: 6px;
+  padding: 10px !important;
+}
+.quote-equation {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 14px;
+}
+.quote-mode-note {
+  font-size: 11px;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+.quote-agreement,
+.technical-details {
+  border: 1px solid #dce4ec;
+  border-radius: 10px;
+  padding: 14px;
+  margin: 14px 0;
+  background: #fafbfc;
+}
+.quote-agreement summary,
+.technical-details summary {
+  font-weight: 750;
+  color: #26384a;
+  cursor: pointer;
+  min-height: 26px;
+}
+.quote-agreement[open] summary,
+.technical-details[open] summary {
+  margin-bottom: 14px;
+}
+.technical-details p {
+  font-size: 12px;
+  margin: 0 0 14px;
+}
+.quote-review {
+  background: #fff3d9;
+  border: 1px solid #e9c780;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.quote-review p {
+  margin: 8px 0 12px;
+  color: #705322;
+}
+.quote-input-error:not(:empty) {
+  margin: 12px 0;
+  color: #a7261e;
+  background: #fff0ec;
+  padding: 12px;
+  border-radius: 8px;
+}
+.quote-item input:invalid,
+.quote-editor input:invalid {
+  border-color: #c95b47;
+}
+.quote-summary .sep {
+  margin: 15px 0;
+}
+.quote-editor .field p {
+  font-size: 11px;
+  margin-top: 6px;
+}
+@media (max-width: 690px) {
+  .home-brand img {
+    width: 65px;
+    height: 72px;
+  }
+  .home-brand span {
+    font-size: 22px;
+  }
+  .quote-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .quote-heading .button {
+    width: 100%;
+  }
+  .quote-item {
+    padding: 13px;
+  }
+  .quote-item input,
+  .quote-editor select,
+  .quote-editor textarea {
+    font-size: 16px;
+  }
+  .quote-item-numbers {
+    grid-template-columns: minmax(0, 0.65fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+  .quote-line-total {
+    grid-column: 1/-1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .quote-line-total b {
+    margin: 0;
+  }
+  .quote-editor .quotegrid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .quote-editor .quotegrid > div,
+  .quote-summary {
+    width: 100%;
+  }
+  .quote-summary {
+    order: -1;
+    position: static;
+    padding: 18px;
+  }
+  .quote-total-amount {
+    font-size: 32px;
+  }
+  .quote-review .button {
+    width: 100%;
+  }
+  .quote-item label {
+    line-height: 1.5;
+  }
+  .technical-details .fields2 {
+    grid-template-columns: 1fr;
+  }
+}
 :root {
   --ink: #191e26;
   --bg: #f5f6f7;
