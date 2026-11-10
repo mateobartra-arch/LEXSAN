@@ -24,6 +24,12 @@ render = function () {
     }
   }
   if (route === "inicio") {
+    const heroTitle = document.querySelector(".hero > div");
+    if (heroTitle)
+      heroTitle.insertAdjacentHTML(
+        "afterbegin",
+        `<div class="home-brand"><img src="${LOGO}" alt="LEXSAN Radiadores S.A.C."><span>LEXSAN <small>RADIADORES S.A.C.</small></span></div>`,
+      );
     document
       .querySelector(".hero")
       ?.insertAdjacentHTML(
