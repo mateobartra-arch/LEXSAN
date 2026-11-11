@@ -458,3 +458,45 @@ input[type="password"] {
     max-width: 110px;
   }
 }
+.daily-actions,
+.daily-pending {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.daily-actions button {
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  border: 1px solid #f0bca6;
+}
+.daily-actions h2 {
+  color: #c34b20;
+  margin-bottom: 10px;
+}
+.daily-pending p {
+  margin: 10px 0;
+}
+.daily-actions .card:hover {
+  border-color: #e66027;
+  background: #fff8f4;
+}
+#quick-error {
+  color: #b42318;
+}
+#quick-lines .card {
+  padding: 16px;
+}
+@media (max-width: 700px) {
+  .daily-actions,
+  .daily-pending {
+    grid-template-columns: 1fr;
+  }
+  .daily-actions {
+    gap: 10px;
+  }
+  .daily-actions .card {
+    padding: 18px;
+  }
+}
