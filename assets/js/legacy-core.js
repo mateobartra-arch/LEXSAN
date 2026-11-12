@@ -581,7 +581,7 @@ function createTicket() {
         discount: 0,
         gross: null,
         terms: ["venta", "cotizacion"].includes(k)
-          ? "Entrega y disponibilidad por confirmar. Validez de oferta: 7 días. Pago: contado."
+          ? "Entrega: 1 día hábil. Validez: 7 días. Pago: contado. Refrigerante recomendado: Prestone, Zerex Valvoline u otro; no Vistony. Usar gomas de soporte y pernos de seguridad operativos. Garantía: 6 meses por defecto de fábrica. No cubre oxidación interior, abolladuras ni fisuras del colector. Cambio de refrigerante: No."
           : "Entrega según evaluación. Validez de oferta: 7 días. Lugar de entrega: Taller Lexsan Radiadores. Condición de pago: contado.",
       },
       work: {
@@ -750,7 +750,7 @@ function renderEvaluationView(t, money) {
     .join(
       "",
     )}</select><button class="button soft" onclick="applyTechnicalPreset()">Agregar propuesta</button></div><p class="small" style="margin:5px 0"></p></div><div class="field"><label>Corrección o procedimiento propuesto</label><textarea id="ev-fixes" oninput="draftInput()" placeholder="Procesos técnicos aplicables y aprobados">${esc(t.eval.fixes)}</textarea></div><div class="field"><label>Evidencia fotográfica (opcional)</label><input type="file" accept="image/*" id="ev-photo" onchange="addPhoto(this)"><div class="photo-row">${t.eval.photos.map((src) => `<img src="${src}" alt="Evidencia">`).join("")}</div></div>`;
-  return `${sale ? saleForm : needsEvaluation(t) ? technicalForm + technicalDetails(t) : `<div class="hint goodhint">Cotización directa · No requiere evaluación ni recepción física. ${needsWorkOrder(t) ? "Incluye OT tras la aprobación." : "Sin OT: entrega o conformidad y cobro tras la aprobación."}</div>`}<div class="sep"></div>${quoteView}${commonActions}`;
+  return `${quoteView}<details class="quote-extra" style="margin-top:20px"><summary>${sale ? "Catálogo de productos" : "Evaluación técnica y fotografías"}</summary>${sale ? saleForm : needsEvaluation(t) ? technicalForm + technicalDetails(t) : "Cotización directa, sin evaluación."}</details>${commonActions}`;
 }
 function applyTechnicalPreset() {
   const t = ticket(modal),

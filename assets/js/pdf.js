@@ -522,6 +522,15 @@ function buildLexsanPDF(t, c, kind) {
         y += rowH;
       }
     }
+    if (t.vehicle?.brand || t.vehicle?.model) {
+      y += 8;
+      paragraph(
+        "VEHÍCULO: " +
+          [t.vehicle.brand, t.vehicle.model].filter(Boolean).join(" "),
+        10,
+        14,
+      );
+    }
     y += 16;
     room(v.adjust ? 177 : 155);
     function moneyRow(label, value, bold = false) {

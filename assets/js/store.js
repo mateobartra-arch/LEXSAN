@@ -1,3 +1,8 @@
+function persistentRecord(data) {
+  return JSON.stringify(data, (key, value) =>
+    key === "photos" || key === "receipts" ? [] : value,
+  );
+}
 /* Persistence boundary. The legacy UI remains synchronous; writes are coalesced and
    the session layer waits for flush before transitions, downloads and sign-out. */
 window.LexStore = {
@@ -24,7 +29,7 @@ window.LexStore = {
     try {
       const raw = localStorage.getItem(key);
       const data = LexDomain.migrate(raw ? JSON.parse(raw) : fresh());
-      this.committed = JSON.stringify(data);
+      this.committed = persistentRecord(data);
       return data;
     } catch (e) {
       this.failed = true;
@@ -52,7 +57,7 @@ window.LexStore = {
     }
     if (this.mode === "local") {
       try {
-        const json = JSON.stringify(data);
+        const json = persistentRecord(data);
         localStorage.setItem(this.key, json);
         this.committed = json;
         this.status("Guardado en este navegador");
@@ -84,7 +89,7 @@ window.LexStore = {
     }
     if (!this.pending) return;
     this.pending = false;
-    const snapshot = JSON.parse(JSON.stringify(db));
+    const snapshot = JSON.parse(persistentRecord(db));
     this.flight = this.adapter
       .commit(snapshot)
       .then(() => {

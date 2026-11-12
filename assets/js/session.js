@@ -1,6 +1,8 @@
 window.LexSession = { user: null, ready: LexStore.mode === "local" };
 const commercialCommands = [
-  "quickSale", "saveQuickSale", "invoicePicker",
+  "quickSale",
+  "saveQuickSale",
+  "invoicePicker",
   "newTicket",
   "newQuote",
   "createTicket",
@@ -11,6 +13,7 @@ const commercialCommands = [
   "updateLine",
   "updatePrice",
   "setPricingMode",
+  "saveVehicle",
   "updateTerms",
   "applyTechnicalPreset",
   "applySalePreset",

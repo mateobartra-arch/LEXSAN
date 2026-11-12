@@ -102,14 +102,9 @@
       t.payments ||= [];
       t.receipts ||= [];
       t.work.progress ||= [];
-      t.eval.photos = (t.eval.photos || []).filter(
-        (x) =>
-          typeof x === "string" &&
-          /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(x),
-      );
-      t.receipts = t.receipts.filter((r) =>
-        /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(r.src),
-      );
+      // Photos are evidence used for the report only, never persisted in the record.
+      t.eval.photos = [];
+      t.receipts = [];
     }
     return data;
   }

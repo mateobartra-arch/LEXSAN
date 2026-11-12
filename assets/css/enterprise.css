@@ -501,5 +501,114 @@ input[type="password"] {
   }
 }
 
-.content > .home-brand {color:#142338}.content > .home-brand small {color:#52657b}
-
+.content > .home-brand {
+  color: #142338;
+}
+.content > .home-brand small {
+  color: #52657b;
+}
+.quote-simple {
+  max-width: 980px;
+  margin: auto;
+}
+.quote-simple .quote-heading {
+  margin-bottom: 18px;
+}
+.quote-simple .quote-heading h3 {
+  font-size: 23px;
+}
+.quote-vehicle,
+.quote-row {
+  background: #fff;
+  border: 1px solid #e3e8ef;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.quote-vehicle strong {
+  display: block;
+  margin-bottom: 12px;
+}
+.quote-vehicle label,
+.quote-simple label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #41536a;
+}
+.quote-vehicle input,
+.quote-simple input,
+.quote-simple textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+.quote-row-head {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.quote-row label {
+  margin-top: 8px;
+}
+.quote-row-total {
+  text-align: right;
+  padding-top: 10px;
+  color: #596b80;
+}
+.quote-row-total b {
+  color: #172b42;
+  font-size: 18px;
+  margin-left: 10px;
+}
+.quote-summary-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 18px;
+  align-items: start;
+  margin-top: 16px;
+}
+.quote-summary {
+  position: sticky;
+  top: 12px;
+}
+.quote-final {
+  font-size: 18px;
+  border-top: 1px solid #d5dee8;
+  padding-top: 10px;
+}
+.quote-extra {
+  background: #f6f8fb;
+  border-radius: 10px;
+  padding: 14px;
+}
+.quote-extra summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+.quote-extra label {
+  margin-top: 14px;
+}
+.quote-extra textarea {
+  min-height: 130px;
+}
+.quote-footnote {
+  font-size: 12px;
+  color: #65758a;
+  margin-top: 12px;
+}
+@media (max-width: 700px) {
+  .quote-summary-layout {
+    grid-template-columns: 1fr;
+  }
+  .quote-summary {
+    position: static;
+    grid-row: 1;
+  }
+  .quote-vehicle,
+  .quote-row {
+    padding: 12px;
+  }
+}
+@media(min-width:900px){.quote-simple .quote-row{display:grid;grid-template-columns:minmax(220px,1fr) 250px 110px;gap:12px;padding:12px}.quote-row-head{grid-column:1/-1;margin:0}.quote-row .fields2{margin:0;gap:10px}.quote-row-total{align-self:end;padding-bottom:12px}.quote-simple .quote-row label{margin-top:0}.quote-vehicle{display:grid;grid-template-columns:1fr 210px;gap:12px}.quote-vehicle strong{grid-column:1/-1;margin:0}.quote-vehicle .fields2{margin:0}}
