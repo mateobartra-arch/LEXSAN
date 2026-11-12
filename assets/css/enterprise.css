@@ -611,4 +611,116 @@ input[type="password"] {
     padding: 12px;
   }
 }
-@media(min-width:900px){.quote-simple .quote-row{display:grid;grid-template-columns:minmax(220px,1fr) 250px 110px;gap:12px;padding:12px}.quote-row-head{grid-column:1/-1;margin:0}.quote-row .fields2{margin:0;gap:10px}.quote-row-total{align-self:end;padding-bottom:12px}.quote-simple .quote-row label{margin-top:0}.quote-vehicle{display:grid;grid-template-columns:1fr 210px;gap:12px}.quote-vehicle strong{grid-column:1/-1;margin:0}.quote-vehicle .fields2{margin:0}}
+@media (min-width: 900px) {
+  .quote-simple .quote-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 250px 110px;
+    gap: 12px;
+    padding: 12px;
+  }
+  .quote-row-head {
+    grid-column: 1/-1;
+    margin: 0;
+  }
+  .quote-row .fields2 {
+    margin: 0;
+    gap: 10px;
+  }
+  .quote-row-total {
+    align-self: end;
+    padding-bottom: 12px;
+  }
+  .quote-simple .quote-row label {
+    margin-top: 0;
+  }
+  .quote-vehicle {
+    display: grid;
+    grid-template-columns: 1fr 210px;
+    gap: 12px;
+  }
+  .quote-vehicle strong {
+    grid-column: 1/-1;
+    margin: 0;
+  }
+  .quote-vehicle .fields2 {
+    margin: 0;
+  }
+}
+.quote-paper {
+  background: white;
+  border: 1px solid #e1e5eb;
+  padding: 24px;
+  box-shadow: 0 3px 18px #1322380a;
+}
+.paper-letterhead {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid #e65c27;
+  margin-bottom: 20px;
+}
+.paper-letterhead img {
+  width: 62px;
+  height: 70px;
+  object-fit: contain;
+}
+.paper-letterhead p {
+  font-size: 12px;
+  color: #7b8797;
+  margin-top: 5px;
+}
+.paper-letterhead > strong {
+  margin-left: auto;
+  font-size: 15px;
+  color: #cf4a16;
+}
+.paper-customer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+.paper-customer p {
+  margin-top: 5px;
+}
+.quote-paper > .quote-vehicle {
+  margin-top: 16px;
+}
+.quote-paper .quote-item {
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+}
+.quote-paper .quote-summary {
+  background: #fafafa;
+  border-radius: 0;
+  position: static;
+}
+.quote-paper input,
+.quote-paper textarea {
+  border-color: #e2e7ed;
+  border-radius: 4px;
+}
+@media (max-width: 700px) {
+  .quote-paper {
+    padding: 12px;
+  }
+  .paper-customer {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .paper-letterhead {
+    gap: 8px;
+  }
+  .paper-letterhead > strong {
+    font-size: 11px;
+  }
+  .paper-letterhead img {
+    width: 40px;
+    height: 50px;
+  }
+  .paper-letterhead b {
+    font-size: 12px;
+  }
+}

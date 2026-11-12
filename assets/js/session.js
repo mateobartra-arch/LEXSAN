@@ -14,6 +14,7 @@ const commercialCommands = [
   "updatePrice",
   "setPricingMode",
   "saveVehicle",
+  "selectQuoteCompany",
   "updateTerms",
   "applyTechnicalPreset",
   "applySalePreset",

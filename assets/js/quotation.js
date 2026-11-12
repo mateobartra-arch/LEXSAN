@@ -13,7 +13,7 @@ function renderQuoteEditor(t) {
   const editable = t.status === "evaluacion",
     q = t.quote;
   const vehicle = t.vehicle || (t.vehicle = { brand: "", model: "" });
-  return `<section class="quote-editor quote-simple"><header class="quote-heading"><div><h3>Preparar cotización</h3><p>Completa los conceptos y sus precios. El IGV se calcula solo.</p></div></header><div class="quote-vehicle"><strong>Vehículo</strong><div class="fields2"><label>Marca<input id="vehicle-brand" value="${esc(vehicle.brand)}" placeholder="Ej.: Volvo" ${editable ? "" : "disabled"} oninput="saveVehicle()"></label><label>Modelo<input id="vehicle-model" value="${esc(vehicle.model)}" placeholder="Ej.: FH" ${editable ? "" : "disabled"} oninput="saveVehicle()"></label></div><label>Placa / código<input id="vehicle-code" value="${esc(t.serial || "")}" placeholder="Opcional" ${editable ? "" : "disabled"} oninput="saveVehicle()"></label></div><div class="quote-items">${q.lines.map((l, i) => `<article class="quote-item quote-row"><div class="quote-row-head"><span>Concepto ${i + 1}</span>${editable ? `<button class="button ghost sm" aria-label="Quitar ítem ${i + 1}" onclick="removeLine(${i})">Quitar</button>` : ""}</div><label>Descripción<input class="desc" id="ld${i}" maxlength="1500" value="${esc(l.desc)}" placeholder="Ej.: Mantenimiento y sondeo de radiador" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></label><div class="fields2"><label>Cantidad<input type="number" required inputmode="decimal" id="lq${i}" min="0.01" step="0.01" value="${l.qty}" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></label><label>Precio unitario (S/ sin IGV)<input type="number" required inputmode="decimal" id="lp${i}" min="0" step="0.01" value="${l.price}" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></label></div><div class="quote-row-total">Importe <b id="line-total-${i}">${fmt(round(l.qty * l.price))}</b></div></article>`).join("")}<button class="button outline" onclick="addLine()" ${editable ? "" : "disabled"}>＋ Agregar concepto</button></div><div id="quote-input-error" class="quote-input-error" role="alert"></div><div class="quote-summary-layout"><div><details class="quote-extra"><summary>Descuento, entrega y garantía</summary><label>Descuento (S/ sin IGV)<input type="number" required id="q-discount" min="0" step=".01" value="${q.discount || 0}" ${editable ? "" : "disabled"} oninput="updatePrice()"></label><label>Condiciones de entrega, pago y garantía<textarea id="q-terms" ${editable ? "" : "disabled"} oninput="draftInput()">${esc(q.terms)}</textarea></label></details></div><aside id="quote-summary" class="detail quote-summary">${quotationSummary(t)}</aside></div><p class="quote-footnote">Precios expresados en soles. El IGV del 18 % se agrega al subtotal.</p></section>`;
+  return `<section class="quote-editor quote-simple quote-paper">${quotePaperHeader(t, editable)}<div class="quote-vehicle"><strong>Vehículo</strong><div class="fields2"><label>Marca<input id="vehicle-brand" value="${esc(vehicle.brand)}" placeholder="Ej.: Volvo" ${editable ? "" : "disabled"} oninput="saveVehicle()"></label><label>Modelo<input id="vehicle-model" value="${esc(vehicle.model)}" placeholder="Ej.: FH" ${editable ? "" : "disabled"} oninput="saveVehicle()"></label></div><label>Placa / código<input id="vehicle-code" value="${esc(t.serial || "")}" placeholder="Opcional" ${editable ? "" : "disabled"} oninput="saveVehicle()"></label></div><div class="quote-items">${q.lines.map((l, i) => `<article class="quote-item quote-row"><div class="quote-row-head"><span>Concepto ${i + 1}</span>${editable ? `<button class="button ghost sm" aria-label="Quitar ítem ${i + 1}" onclick="removeLine(${i})">Quitar</button>` : ""}</div><label>Descripción<input class="desc" id="ld${i}" maxlength="1500" value="${esc(l.desc)}" placeholder="Ej.: Mantenimiento y sondeo de radiador" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></label><div class="fields2"><label>Cantidad<input type="number" required inputmode="decimal" id="lq${i}" min="0.01" step="0.01" value="${l.qty}" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></label><label>Precio unitario (S/ sin IGV)<input type="number" required inputmode="decimal" id="lp${i}" min="0" step="0.01" value="${l.price}" ${editable ? "" : "disabled"} oninput="updateLine(${i})"></label></div><div class="quote-row-total">Importe <b id="line-total-${i}">${fmt(round(l.qty * l.price))}</b></div></article>`).join("")}<button class="button outline" onclick="addLine()" ${editable ? "" : "disabled"}>＋ Agregar concepto</button></div><div id="quote-input-error" class="quote-input-error" role="alert"></div><div class="quote-summary-layout"><div><details class="quote-extra"><summary>Descuento, entrega y garantía</summary><label><input type="checkbox" style="width:auto;display:inline" ${t.requiresOT ? "checked" : ""} ${editable ? "" : "disabled"} onchange="ticket(modal).requiresOT=this.checked;save()"> Requiere orden de trabajo tras aprobar</label><label>Descuento (S/ sin IGV)<input type="number" required id="q-discount" min="0" step=".01" value="${q.discount || 0}" ${editable ? "" : "disabled"} oninput="updatePrice()"></label><label>Condiciones de entrega, pago y garantía<textarea id="q-terms" ${editable ? "" : "disabled"} oninput="draftInput()">${esc(q.terms)}</textarea></label></details></div><aside id="quote-summary" class="detail quote-summary">${quotationSummary(t)}</aside></div><p class="quote-footnote">Precios expresados en soles. El IGV del 18 % se agrega al subtotal.</p></section>`;
 }
 function saveVehicle() {
   const t = ticket(modal);
@@ -28,7 +28,13 @@ function saveVehicle() {
 
 function quoteFieldError() {
   const area = document.querySelector(".quote-editor");
+  if (!db.clients.some((c) => c.id === ticket(modal)?.clientId))
+    return "Selecciona la empresa o cliente.";
+  if (!ticket(modal)?.equipment.trim())
+    return "Completa la descripción de la cotización.";
   if (!area) return "";
+  if (!db.clients.some((c) => c.id === ticket(modal).clientId))
+    return "Selecciona la empresa o cliente de la cotización.";
   for (const e of area.querySelectorAll("input:not(:disabled)")) {
     if (e.type === "number" && !e.checkValidity())
       return "Revisa las cantidades y los importes marcados. No se puede generar el PDF con esos valores.";
@@ -175,3 +181,59 @@ function saveTechnicalDetails() {
     t.eval[key] = document.getElementById("tech-" + key)?.value || "";
   save();
 }
+
+function quotePaperHeader(t, editable) {
+  const c = db.clients.find((c) => c.id === t.clientId);
+  return `<header class="paper-letterhead"><img src="${LOGO}" alt="LEXSAN"><div><b>LEXSAN RADIADORES S.A.C.</b><p>Cotización editable</p></div><strong>${esc(t.quote.number || cid(t.id))}</strong></header><div class="paper-customer"><label>Empresa / cliente<select id="quote-company" ${editable ? "" : "disabled"} onchange="selectQuoteCompany(this.value)"><option value="">Seleccionar empresa o cliente</option>${db.clients.map((c) => `<option value="${esc(c.id)}" ${c.id === t.clientId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label><div id="quote-company-data">${c ? `<b>${c.type === "ruc" ? "RUC" : "Documento"}: ${esc(c.id)}</b><p>${esc(c.contact || "")} ${esc(c.phone || "")}</p><p>${esc(c.email || "")}</p>` : "Los datos del cliente aparecerán aquí."}</div></div><label>Descripción / asunto<input id="quote-subject" value="${esc(t.equipment)}" ${editable ? "" : "disabled"} oninput="ticket(modal).equipment=this.value;save()" placeholder="Ej.: Venta de radiador de H2O"></label>`;
+}
+function selectQuoteCompany(id) {
+  const t = ticket(modal);
+  if (!t || t.status !== "evaluacion") return;
+  t.clientId = id;
+  save();
+  renderTicketModal();
+}
+newQuote = function () {
+  const id = LexStore.nextId(db),
+    t = {
+      id,
+      kind: "cotizacion",
+      requiresOT: false,
+      clientId: "",
+      equipment: "",
+      serial: "",
+      productCode: "",
+      received: iso(),
+      createdAt: new Date().toISOString(),
+      status: "evaluacion",
+      eval: { condition: "", findings: "", fixes: "", photos: [] },
+      quote: {
+        number: "",
+        version: 1,
+        pricingMode: "items",
+        lines: [{ desc: "", qty: 1, price: 0 }],
+        discount: 0,
+        gross: null,
+        terms:
+          "Entrega por confirmar. Lugar: Taller Lexsan Radiadores. Validez de oferta: 7 días. Pago: contado.",
+      },
+      vehicle: { brand: "", model: "" },
+      work: {
+        responsible: "",
+        start: "",
+        finished: "",
+        qc: false,
+        delivered: "",
+        progress: [],
+      },
+      doc: { type: "", number: "", date: "" },
+      paid: 0,
+      payments: [],
+      receipts: [],
+      events: [],
+    };
+  db.tickets.push(t);
+  event(t, "Borrador de cotización directa");
+  save();
+  openTicket(id, "evaluacion");
+};
