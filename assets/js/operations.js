@@ -181,12 +181,12 @@ function saveApproval() {
   toast("Aprobación registrada. Ya puedes registrar un adelanto.");
 }
 ticketBody = function (t) {
-  if (tab !== "cobro") return priorBody(t);
+  if (tab !== "cobro") return priorBody(t) + (["resumen", "entrega"].includes(tab) ? receiptTracking(t) : "");
   const enabled = ["inicio", "taller", "entrega", "documento"].includes(
       t.status,
     ),
     due = round(calc(t).gross - t.paid);
-  return `<h3>Pagos y comprobante</h3><p class="sub">Registra adelantos desde la aprobación, incluso antes de empezar. El saldo se cobra al entregar.</p><div class="detail" style="margin:16px 0"><div class="totalrow"><span>Total aprobado</span><b>${fmt(calc(t).gross)}</b></div><div class="totalrow"><span>Total recibido</span><b>${fmt(t.paid)}</b></div><div class="totalrow big"><span>Saldo pendiente</span><b>${fmt(Math.max(0, due))}</b></div></div>${enabled ? `<form onsubmit="event.preventDefault();saveAdvance()"><div class="fields2"><div class="field"><label>Importe recibido (S/)</label><input id="advance-amount" type="number" min="0.01" max="${Math.max(0, due)}" step=".01" required></div><div class="field"><label>Fecha del pago</label><input id="advance-date" type="date" value="${iso()}" required></div><div class="field"><label>Medio de pago</label><select id="advance-method"><option>Transferencia</option><option>Efectivo</option><option>Yape / Plin</option><option>Tarjeta</option></select></div><div class="field"><label>Referencia / número de operación</label><input id="advance-ref"></div></div><button class="button" ${due <= 0 ? "disabled" : ""}>Registrar ${t.work.delivered ? "pago" : "adelanto"}</button></form>` : t.status === "cerrado" ? '<div class="hint goodhint">Expediente cerrado y totalmente cobrado.</div>' : '<div class="hint">Los pagos se habilitan al aprobar la cotización.</div>'}<div class="sep"></div><h3>Historial de pagos</h3>${(t.payments || []).map((p) => `<div class="payment-entry"><b>${fmt(p.amount)}</b> · ${esc(p.date)} · ${esc(p.method)}<br><span class="small muted">${esc(p.reference || "Sin referencia")} · ${esc(p.operator || "")}</span></div>`).join("") || '<p class="sub">Sin nuevos pagos registrados.</p>'}${t.paid > round((t.payments || []).reduce((a, p) => a + p.amount, 0)) ? `<p class="sub">Pagos anteriores: ${fmt(round(t.paid - (t.payments || []).reduce((a, p) => a + p.amount, 0)))}</p>` : ""}<div class="sep"></div><h3>Comprobante emitido externamente</h3><p class="sub">Registro de factura o boleta; el portal no emite comprobantes electrónicos.</p>${enabled ? `<form onsubmit="event.preventDefault();saveDocument()"><div class="fields3" style="margin-top:14px"><div class="field"><label>Tipo</label><select id="doc-type"><option ${t.doc.type === "FACTURA" ? "selected" : ""}>FACTURA</option><option ${t.doc.type === "BOLETA" ? "selected" : ""}>BOLETA</option></select></div><div class="field"><label>Serie y número</label><input id="doc-number" value="${esc(t.doc.number)}" placeholder="F001-0000123" required></div><div class="field"><label>Fecha de emisión</label><input id="doc-date" type="date" value="${t.doc.date || iso()}" required></div></div><button class="button outline">Guardar comprobante</button></form>` : `<p class="sub">${esc(t.doc.number || "Sin comprobante registrado")}</p>`}<div class="sep"></div><h3>Fotos de comprobantes / constancias de pago</h3>${enabled ? photoInputs("receipt") : ""}<div class="photo-row">${(t.receipts || []).map((r) => `<a href="${r.src}" download="comprobante.jpg"><img class="attachment" src="${r.src}" alt="${esc(r.name)}"></a>`).join("")}</div>`;
+  return `<h3>Pagos y comprobante</h3><p class="sub">Registra adelantos desde la aprobación, incluso antes de empezar. Puedes registrar el cobro al entregar o en la fecha pactada.</p><div class="detail" style="margin:16px 0"><div class="totalrow"><span>Total aprobado</span><b>${fmt(calc(t).gross)}</b></div><div class="totalrow"><span>Total recibido</span><b>${fmt(t.paid)}</b></div><div class="totalrow big"><span>Saldo pendiente</span><b>${fmt(Math.max(0, due))}</b></div></div>${enabled ? `<form onsubmit="event.preventDefault();saveAdvance()"><div class="fields2"><div class="field"><label>Importe recibido (S/)</label><input id="advance-amount" type="number" min="0.01" max="${Math.max(0, due)}" step=".01" required></div><div class="field"><label>Fecha del pago</label><input id="advance-date" type="date" value="${iso()}" required></div><div class="field"><label>Medio de pago</label><select id="advance-method"><option>Transferencia</option><option>Efectivo</option><option>Yape / Plin</option><option>Tarjeta</option></select></div><div class="field"><label>Referencia / número de operación</label><input id="advance-ref"></div></div><button class="button" ${due <= 0 ? "disabled" : ""}>Registrar ${t.work.delivered ? "pago" : "adelanto"}</button></form>` : t.status === "cerrado" ? '<div class="hint goodhint">Expediente cerrado y totalmente cobrado.</div>' : '<div class="hint">Los pagos se habilitan al aprobar la cotización.</div>'}<div class="sep"></div><h3>Historial de pagos</h3>${(t.payments || []).map((p) => `<div class="payment-entry"><b>${fmt(p.amount)}</b> · ${esc(p.date)} · ${esc(p.method)}<br><span class="small muted">${esc(p.reference || "Sin referencia")} · ${esc(p.operator || "")}</span></div>`).join("") || '<p class="sub">Sin nuevos pagos registrados.</p>'}${t.paid > round((t.payments || []).reduce((a, p) => a + p.amount, 0)) ? `<p class="sub">Pagos anteriores: ${fmt(round(t.paid - (t.payments || []).reduce((a, p) => a + p.amount, 0)))}</p>` : ""}<div class="sep"></div><h3>Comprobante emitido externamente</h3>${t.doc.number ? `<p><b>Vencimiento:</b> ${esc(invoiceDue(t) || "Sin fecha de emisión")}</p>` : ""}<p class="sub">Registro de factura o boleta; el portal no emite comprobantes electrónicos.</p>${enabled ? `<form onsubmit="event.preventDefault();saveDocument()"><div class="fields3" style="margin-top:14px"><div class="field"><label>Tipo</label><select id="doc-type"><option ${t.doc.type === "FACTURA" ? "selected" : ""}>FACTURA</option><option ${t.doc.type === "BOLETA" ? "selected" : ""}>BOLETA</option></select></div><div class="field"><label>Serie y número</label><input id="doc-number" value="${esc(t.doc.number)}" placeholder="F001-0000123" required></div><div class="field"><label>Fecha de emisión</label><input id="doc-date" type="date" value="${t.doc.date || iso()}" required></div></div><label for="doc-payment-days">Plazo de pago en días calendario (0 si es al contado)</label><input id="doc-payment-days" type="number" min="0" max="365" step="1" value="${invoiceDays(t)}" required><button class="button outline">Guardar comprobante</button></form>` : `<p class="sub">${esc(t.doc.number || "Sin comprobante registrado")}</p>`}<div class="sep"></div><h3>Fotos de comprobantes / constancias de pago</h3>${enabled ? photoInputs("receipt") : ""}<div class="photo-row">${(t.receipts || []).map((r) => `<a href="${r.src}" download="comprobante.jpg"><img class="attachment" src="${r.src}" alt="${esc(r.name)}"></a>`).join("")}</div>`;
 };
 function maybeClose(t) {
   if (t.work.delivered && t.doc.number && round(t.paid) >= calc(t).gross) {
@@ -242,7 +242,9 @@ function saveDocument() {
     return toast("La factura requiere un cliente con RUC.");
   if (db.tickets.some((x) => x.id !== t.id && x.doc.number === number))
     return toast("Este comprobante ya está registrado.");
-  t.doc = { ...t.doc, type, number, date };
+  const days = Number(document.getElementById("doc-payment-days").value);
+  if (!Number.isInteger(days) || days < 0 || days > 365) return toast("Revisa el plazo de pago.");
+  t.doc = { ...t.doc, type, number, date, paymentDays: days };
   event(t, "Comprobante registrado: " + number);
   maybeClose(t);
   save();
@@ -417,4 +419,108 @@ if (!document.querySelector('[data-route="inventario"]')) {
   b.textContent = "Inventario";
   b.onclick = () => go("inventario");
   document.querySelector(".rail").appendChild(b);
+}
+
+function defaultPaymentDays(customer) {
+  return customer?.id === "20100814162" ||
+    /\braciemsa\b|racionalizacion empresarial/.test(normal(customer?.name || "")) ? 30 : 0;
+}
+function paymentTerms(customer) {
+  const days = defaultPaymentDays(customer);
+  return days ? `Crédito a ${days} días desde la emisión de la factura` : "Contado";
+}
+function applyCustomerPayment(t, nextClientId) {
+  if (t.clientId === nextClientId || !t.quote.conditions) return;
+  const terms = t.quote.conditions;
+  if (!terms.payment || terms.payment === paymentTerms(client(t.clientId))) {
+    terms.payment = paymentTerms(client(nextClientId));
+    const field = document.getElementById("qc-payment");
+    if (field) field.value = terms.payment;
+  }
+}
+function invoiceDays(t) {
+  if (Number.isInteger(t.doc.paymentDays)) return t.doc.paymentDays;
+  const terms = t.quote.conditions?.payment || "";
+  if (/^contado$/i.test(terms)) return 0;
+  const stated = /(?:cr[eé]dito\s+(?:a\s+)?)?(\d{1,3})\s+d[ií]as/i.exec(terms);
+  return stated ? Math.min(365, Number(stated[1])) : defaultPaymentDays(client(t.clientId));
+}
+function invoiceDue(t) {
+  if (!t.doc.number || !/^\d{4}-\d{2}-\d{2}$/.test(t.doc.date || "")) return "";
+  const due = new Date(t.doc.date + "T00:00:00Z");
+  if (!Number.isFinite(due.getTime())) return "";
+  due.setUTCDate(due.getUTCDate() + invoiceDays(t));
+  return due.toISOString().slice(0, 10);
+}
+function deliveryText(t) {
+  if (t.work.delivered) return "Entregado · " + (t.work.deliveredDate || t.work.delivered);
+  if (t.status === "rechazado") return "Cotización rechazada";
+  const status = t.status === "entrega" ? "Listo para entregar" : "Pendiente de entrega";
+  return status + (t.promisedDelivery ? " · prevista " + t.promisedDelivery : "");
+}
+function accountRow(t, today = iso()) {
+  const billable = t.status !== "rechazado" && (t.approval || t.doc.number || t.quickSale || t.work.delivered);
+  const total = billable ? calc(t).gross : 0;
+  const paid = Number(t.paid) || 0;
+  const balance = Math.max(0, round(total - paid));
+  const due = invoiceDue(t);
+  const overdue = Boolean(balance && due && due < today);
+  const payment = !billable ? "Sin importe aprobado" : !balance ? "Pagado" :
+    overdue ? (paid ? "Pago parcial · vencido" : "Vencido") :
+    paid ? "Pago parcial" : "Por cobrar";
+  return {total, paid, balance, due, overdue, payment};
+}
+function clientStatement(c, items) {
+  const rows = items.map(t => ({t, ...accountRow(t)}));
+  const sum = key => round(rows.reduce((amount, r) => amount + r[key], 0));
+  return `<section class="detail" style="margin-bottom:16px"><h3>Estado de cuenta</h3>
+    <div class="totalrow"><span>Importe registrado</span><b>${fmt(sum("total"))}</b></div>
+    <div class="totalrow"><span>Pagos recibidos</span><b>${fmt(sum("paid"))}</b></div>
+    <div class="totalrow"><span>Saldo por cobrar</span><b>${fmt(sum("balance"))}</b></div>
+    <div class="totalrow"><span>Saldo vencido</span><b>${fmt(rows.filter(r => r.overdue).reduce((s,r) => s + r.balance, 0))}</b></div>
+    ${c.serviceHistory?.length ? '<p class="small">Incluye los saldos de los expedientes del portal. El historial importado se muestra debajo.</p>' : ""}
+    ${rows.length ? `<button class="button outline sm" onclick="downloadClientStatement('${esc(c.id)}')">Descargar estado de cuenta (CSV)</button><div class="daily-pending">${rows.map(({t,paid,balance,due,payment}) => `
+      <article class="card"><b>${esc(t.equipment)}</b><p>${esc(cid(t.id))} · Ingreso: ${esc(t.received)}</p>
+      <p>${esc(deliveryText(t))}${t.guide?.number ? " · Guía " + esc(t.guide.number) : ""}</p>
+      <p>${t.doc.number ? esc(t.doc.number + " · Emisión: " + t.doc.date) + (due ? " · Vence: " + esc(due) : "") : "Sin comprobante"}</p>
+      <p><b>${esc(payment)}</b> · Pagado ${fmt(paid)} · Saldo ${fmt(balance)}</p>
+      <button class="button outline sm" onclick="openTicket(${t.id},'${t.approval || t.quickSale || t.doc.number ? "cobro" : "resumen"}')">Ver expediente</button></article>`).join("")}</div>` : "<p>No hay movimientos registrados.</p>"}
+  </section>`;
+}
+function downloadClientStatement(id) {
+  const c = client(id);
+  const rows = [["Cliente", "Documento", "Expediente", "Servicio", "Ingreso", "Entrega prevista", "Entrega real", "Guía", "Fecha guía", "Factura o boleta", "Emisión", "Vence", "Importe", "Recibido", "Saldo", "Estado"]];
+  for (const t of db.tickets.filter(item => item.clientId === id).sort((a,b) => b.id-a.id)) {
+    const a = accountRow(t);
+    rows.push([c.name, c.id, cid(t.id), t.equipment, t.received, t.promisedDelivery, t.work.deliveredDate || t.work.delivered,
+      t.guide?.number, t.guide?.date, t.doc.number, t.doc.date, a.due, a.total, a.paid, a.balance, a.payment]);
+  }
+  const csvCell = input => {
+    const value = String(input ?? "");
+    return '"' + (/^\s*[=+\-@]/.test(value) ? "'" : "") + value.replaceAll('"', '""') + '"';
+  };
+  const blob = new Blob(["\uFEFF" + rows.map(row => row.map(csvCell).join(";")).join("\r\n")],
+    {type: "text/csv;charset=utf-8"});
+  pdfDownload(blob, "LEXSAN-estado-de-cuenta-" + id.replace(/[^0-9A-Za-z-]/g, "_") + "-" + iso() + ".csv");
+}
+function receiptTracking(t) {
+  const canEdit = LexSession.user?.role !== "tecnico";
+  return `<div class="detail"><p><b>Entrega:</b> ${esc(deliveryText(t))}</p>
+    <p><b>Guía de remisión recibida:</b> ${esc(t.guide?.number || "Sin registrar")}${t.guide?.date ? " · " + esc(t.guide.date) : ""}</p>
+    ${canEdit ? `<details class="quote-extra"><summary>Editar guía y entrega prevista</summary>
+    <form onsubmit="event.preventDefault();saveReceiptTracking(this)">
+    <div class="fields2"><label>Número de guía<input name="guide" maxlength="50" value="${esc(t.guide?.number || "")}"></label>
+    <label>Fecha de emisión de la guía<input name="guideDate" type="date" value="${esc(t.guide?.date || "")}"></label>
+    <label>Fecha prevista de entrega<input name="promiseDate" type="date" value="${esc(t.promisedDelivery || "")}"></label></div>
+    <button class="button outline sm">Guardar seguimiento</button></form></details>` : ""}</div>`;
+}
+function saveReceiptTracking(form) {
+  const t = ticket(modal);
+  if (!t || LexSession.user?.role === "tecnico") return;
+  const fields = new FormData(form);
+  const number = fields.get("guide").trim().toUpperCase(), date = fields.get("guideDate");
+  if (date && !number) return toast("Completa el número de la guía de remisión.");
+  t.guide = {number, date};
+  t.promisedDelivery = fields.get("promiseDate");
+  if (save()) renderTicketModal();
 }

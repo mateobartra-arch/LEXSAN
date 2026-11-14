@@ -45,7 +45,7 @@ render = function () {
         .map((t) => {
           const due = Math.max(0, round(calc(t).gross - t.paid)),
             approved = !!t.approval;
-          return `<article class="card"><b>${esc(client(t.clientId).name)}</b><p>${esc(t.equipment)} · ${esc(t.work.delivered ? "Entregado" : labels[t.status] || t.status)}</p><p>${approved ? "Saldo: " + fmt(due) : "Importe pendiente de aprobación"}</p><button class="button outline" onclick="openTicket(${t.id},'${approved && due > 0 ? "cobro" : t.status === "entrega" ? "entrega" : "evaluacion"}')">${approved && due > 0 ? "Ver saldo / registrar abono" : t.status === "entrega" ? "Ver entrega" : "Ver trabajo"}</button></article>`;
+          return `<article class="card"><b>${esc(client(t.clientId).name)}</b><p>${esc(t.equipment)} · ${esc(t.work.delivered ? deliveryText(t) : labels[t.status] || t.status)}</p><p>${approved ? "Saldo: " + fmt(due) : "Importe pendiente de aprobación"}</p><button class="button outline" onclick="openTicket(${t.id},'${approved && due > 0 ? "cobro" : t.status === "entrega" ? "entrega" : "evaluacion"}')">${approved && due > 0 ? "Ver saldo / registrar abono" : t.status === "entrega" ? "Ver entrega" : "Ver trabajo"}</button></article>`;
         })
         .join("") || "<p>No hay pendientes.</p>"
     }</div></details></section>`;
@@ -54,9 +54,19 @@ function quickSale() {
   quickDraft ||= [{ desc: "", qty: 1, price: 0 }];
   modal = "quick-sale";
   modalShow(
-    `<div class="modal-head"><h2>Venta rápida</h2><button class="xbtn" onclick="closeModal()">×</button></div><div class="modal-body"><form id="quick-form" onsubmit="event.preventDefault();saveQuickSale()"><p>Precios sin IGV. El impuesto se calcula automáticamente.</p><div id="quick-lines"></div><button type="button" class="button outline" onclick="quickDraft.push({desc:'',qty:1,price:0});quickLines()">Agregar otro producto</button><div class="field"><label>Comprador (opcional, obligatorio para factura)</label><select id="quick-client"><option value="">Público general</option>${db.clients.map((c) => `<option value="${esc(c.id)}">${esc(c.id + " · " + c.name)}</option>`).join("")}</select></div><details><summary>Comprador nuevo / comprobante</summary><p>Completa aquí el comprador si todavía no figura en la lista.</p><div class="fields2"><div class="field"><label>RUC o DNI</label><input id="quick-id" inputmode="numeric"></div><div class="field"><label>Nombre / razón social</label><input id="quick-name"></div><div class="field"><label>Comprobante emitido externamente</label><select id="quick-type"><option value="">Sin registrar por ahora</option><option>FACTURA</option><option>BOLETA</option></select></div><div class="field"><label>Serie y número</label><input id="quick-number" placeholder="F001-123"></div></div></details><div class="detail" id="quick-total" aria-live="polite"></div><div class="field"><label>Fecha de venta y pago</label><input id="quick-date" type="date" value="${iso()}" max="${iso()}" required></div><label><input id="quick-full" type="checkbox" checked onchange="quickTotals()"> Cobro completo ahora</label><div class="field" id="quick-partial" hidden><label>Importe recibido (0 si queda pendiente)</label><input id="quick-paid" type="number" min="0" step=".01" value="0"></div><div class="field"><label>Medio de pago</label><select id="quick-method"><option>Efectivo</option><option>Transferencia</option><option>Yape / Plin</option><option>Tarjeta</option></select></div><p>Al guardar, los productos se registran como entregados. El saldo permanece disponible para cobrar después.</p><p id="quick-error" role="alert"></p><button class="button">Guardar venta y cobro</button></form></div>`,
+    `<div class="modal-head"><h2>Venta rápida</h2><button class="xbtn" onclick="closeModal()">×</button></div><div class="modal-body"><form id="quick-form" onsubmit="event.preventDefault();saveQuickSale()"><p>Precios sin IGV. El impuesto se calcula automáticamente.</p><div id="quick-lines"></div><button type="button" class="button outline" onclick="quickDraft.push({desc:'',qty:1,price:0});quickLines()">Agregar otro producto</button><div class="field"><label>Comprador (opcional, obligatorio para factura)</label><select id="quick-client" onchange="suggestQuickPayment()"><option value="">Público general</option>${db.clients.map((c) => `<option value="${esc(c.id)}">${esc(c.id + " · " + c.name)}</option>`).join("")}</select></div><details><summary>Comprador nuevo / comprobante</summary><p>Completa aquí el comprador si todavía no figura en la lista.</p><div class="fields2"><div class="field"><label>RUC o DNI</label><input id="quick-id" inputmode="numeric" onchange="suggestQuickPayment()"></div><div class="field"><label>Nombre / razón social</label><input id="quick-name" onchange="suggestQuickPayment()"></div><div class="field"><label>Comprobante emitido externamente</label><select id="quick-type"><option value="">Sin registrar por ahora</option><option>FACTURA</option><option>BOLETA</option></select></div><div class="field"><label>Serie y número</label><input id="quick-number" placeholder="F001-123"></div><label>Plazo de pago en días calendario<input id="quick-payment-days" type="number" min="0" max="365" step="1" value="0"></label></div></details><div class="detail" id="quick-total" aria-live="polite"></div><div class="field"><label>Fecha de venta y emisión del comprobante</label><input id="quick-date" type="date" value="${iso()}" max="${iso()}" required></div><label><input id="quick-full" type="checkbox" checked onchange="quickTotals()"> Cobro completo ahora</label><div class="field" id="quick-partial" hidden><label>Importe recibido (0 si queda pendiente)</label><input id="quick-paid" type="number" min="0" step=".01" value="0"></div><div class="field"><label>Medio de pago</label><select id="quick-method"><option>Efectivo</option><option>Transferencia</option><option>Yape / Plin</option><option>Tarjeta</option></select></div><p>Al guardar, los productos se registran como entregados. El saldo permanece disponible para cobrar después.</p><p id="quick-error" role="alert"></p><button class="button">Guardar venta y cobro</button></form></div>`,
   );
   quickLines();
+}
+function suggestQuickPayment() {
+  const id = document.getElementById("quick-id").value.trim() || document.getElementById("quick-client").value;
+  const buyer = db.clients.find(c => c.id === id) || {id, name: document.getElementById("quick-name").value};
+  const days = defaultPaymentDays(buyer);
+  document.getElementById("quick-payment-days").value = days;
+  if (days) {
+    document.getElementById("quick-full").checked = false;
+    quickTotals();
+  }
 }
 function quickLines() {
   document.getElementById("quick-lines").innerHTML = quickDraft
@@ -146,6 +156,8 @@ function saveQuickSale() {
   if (number && !type) return fail("Selecciona el tipo de comprobante.");
   if (number && db.tickets.some((t) => t.doc.number === number))
     return fail("Este comprobante ya está registrado.");
+  const paymentDays = Number(value("payment-days"));
+  if (!Number.isInteger(paymentDays) || paymentDays < 0 || paymentDays > 365) return fail("Revisa el plazo de pago.");
   const quantities = {};
   for (const l of quote.lines)
     if (l.stockCode)
@@ -193,9 +205,10 @@ function saveQuickSale() {
         finished: "",
         qc: false,
         delivered: date,
+        deliveredDate: date,
         progress: [],
       },
-      doc: { type, number, date: number ? date : "" },
+      doc: { type, number, date: number ? date : "", ...(number ? {paymentDays} : {}) },
       paid,
       payments: paid
         ? [

@@ -72,6 +72,7 @@ function prepareInvoiceSale() {
   const set = (key, v) => document.getElementById("quick-" + key).value = v;
   set("id", d.buyerRuc); set("name", d.buyer); set("type", "FACTURA"); set("number", d.number); set("date", d.date);
   document.querySelector("#quick-form details").open = true;
+  suggestQuickPayment();
   document.getElementById("quick-full").checked = false;
   set("paid", "0"); quickTotals();
   document.getElementById("quick-error").textContent = "Revisa los datos leídos. Registra el importe cobrado solo si confirmas el pago. Guarda únicamente si es una operación nueva; si ya existe, vincula el comprobante al expediente.";

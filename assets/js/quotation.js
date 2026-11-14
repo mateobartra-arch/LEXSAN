@@ -46,6 +46,7 @@ function searchQuoteRuc(value) {
   const exact = matches.find(c => c.id === query && /^\d{11}$/.test(query));
   if (exact) {
     const previousId = t.clientId;
+    applyCustomerPayment(t, exact.id);
     t.clientId = exact.id;
     document.getElementById("quote-company").value = exact.id;
     if (previousId !== exact.id) t.quote.customer = {};
@@ -344,6 +345,7 @@ function selectQuoteCompany(id) {
   const t = ticket(modal);
   if (!t || t.status !== "evaluacion") return;
   if (t.clientId !== id) t.quote.customer = {};
+  applyCustomerPayment(t, id);
   t.clientId = id;
   save();
   renderTicketModal();
@@ -369,7 +371,7 @@ newQuote = function (sourceId) {
         lines: [{ desc: "", qty: 1, price: 0 }],
         discount: 0,
         gross: null,
-        conditions: { deadline: "Por confirmar", place: "Taller Lexsan Radiadores", validity: "07 días", payment: "Contado", warranty: "Por confirmar según producto o servicio" },
+        conditions: { deadline: "1 día hábil", place: "Taller Lexsan Radiadores", validity: "07 días", payment: "Contado", warranty: "Por confirmar según producto o servicio" },
         terms: "",
       },
       vehicle: { brand: "", model: "" },
