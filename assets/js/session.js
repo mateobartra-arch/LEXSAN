@@ -120,6 +120,7 @@ function setupNavigation() {
     ["cotizaciones", "Cotizaciones", "file"],
     ["inventario", "Inventario", "package"],
     ["facturacion", "Facturación", "briefcase"],
+    ["gastos", "Compras y gastos", "briefcase"],
     ["reportes", "Reportes", "chart"],
     ["usuarios", "Usuarios", "users"],
   ]) {

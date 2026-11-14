@@ -29,11 +29,14 @@ service cloud.firestore {
   match /organizations/{org}/expenses/{id} {
    function validExpense() {
     let p = request.resource.data.payload;
-    return p.keys().hasOnly(['id','date','description','amount'])
+    return p.keys().hasOnly(['id','date','description','amount','documentType','number','supplier','ruc','quantity','unitPrice','base','igv','discount','order','guide','phone','notes','paid','paymentDate','paymentMethod','operation'])
       && p.id is string && p.id == id
       && p.date is string && p.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
-      && p.description is string && p.description.size() > 0 && p.description.size() <= 140
-      && p.amount is number && p.amount > 0 && p.amount <= 1000000;
+      && p.description is string && p.description.size() > 0 && p.description.size() <= 4000
+      && p.amount is number && p.amount > 0 && p.amount <= 1000000
+      && (!('paid' in p) || (p.paid is number && p.paid >= 0 && p.paid <= p.amount))
+      && (!('documentType' in p) || p.documentType in ['FACTURA','BOLETA','PENDIENTE'])
+      && (!('supplier' in p) || (p.supplier is string && p.supplier.size() <= 180));
    }
    allow read: if office(org);
    allow create: if office(org) && createVersion() && validExpense();
