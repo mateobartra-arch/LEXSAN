@@ -61,7 +61,7 @@ const fresh = () => ({
   next: 93,
   clients: [
     {
-      id: "20456091033",
+      id: "20999999999",
       type: "ruc",
       name: "TRANSPORTES DEMO S.A.C.",
       contact: "Contacto de demostración",
@@ -88,7 +88,7 @@ const fresh = () => ({
   tickets: [
     {
       id: 89,
-      clientId: "20456091033",
+      clientId: "20999999999",
       equipment: "Radiador H2O · Motor Foton",
       serial: "PL-000-000",
       received: "2026-11-07",
@@ -468,7 +468,7 @@ function render() {
     const active = db.tickets.filter(
       (t) => !["cerrado", "rechazado"].includes(t.status),
     ).length;
-    p.innerHTML = `<div class="hero"><div><div class="eyebrow">LEXSAN / CONTROL DE SERVICIOS</div><h1>Panel operativo</h1><p>${active} servicios activos · Cotizaciones, taller y entregas</p></div><button class="button" onclick="newTicket()">${uiIcon("plus")} Nuevo trabajo</button></div>${kpis()}<div class="tilegrid"><button class="tile" onclick="newTicket()"><span class="tile-icon">${uiIcon("plus")}</span><span><b>Nuevo trabajo</b><small>Reparación, venta o fabricación</small></span></button><button class="tile" onclick="go('servicios')"><span class="tile-icon">${uiIcon("list")}</span><span><b>Seguimiento</b><small>Servicios y órdenes</small></span></button><button class="tile" onclick="go('clientes')"><span class="tile-icon">${uiIcon("search")}</span><span><b>Buscar cliente</b><small>Ficha e historial</small></span></button></div><div class="dashboard-grid"><div><div class="section-head"><div><h2>Servicios recientes</h2><p class="small">${db.tickets.length} registros · Ordenados por correlativo</p></div><button class="button outline sm" onclick="go('servicios')">Ver todos ${uiIcon("arrow")}</button></div>${rowTickets([...db.tickets].sort((a, b) => b.id - a.id).slice(0, 8))}</div><aside class="dashboard-side"><div class="side-panel"><div class="row between" style="margin-bottom:7px"><h3>Cotizaciones</h3>${uiIcon("file")}</div><p>Documentos comerciales</p><button class="doc-shortcut" onclick="downloadSampleQuote()">${uiIcon("file")}<span><b>Cotización 261-26</b><small>TRANS VILAC · S/ 413.00</small></span><span class="download">↓</span></button><button class="doc-shortcut" onclick="downloadSampleSale()">${uiIcon("file")}<span><b>Cotización 256-26</b><small>Freightliner Century · S/ 2,300.00</small></span><span class="download">↓</span></button></div><div class="side-panel"><div class="row between" style="margin-bottom:8px"><h3>Control de atención</h3>${uiIcon("chart")}</div><p>Trabajos activos: <strong style="color:#172639">${active}</strong></p><p style="margin-top:7px">Servicios cerrados: <strong style="color:#172639">${db.tickets.filter((t) => t.status === "cerrado").length}</strong></p></div></aside></div>`;
+    p.innerHTML = `<div class="hero"><div><div class="eyebrow">LEXSAN / CONTROL DE SERVICIOS</div><h1>Panel operativo</h1><p>${active} servicios activos · Cotizaciones, taller y entregas</p></div><button class="button" onclick="newTicket()">${uiIcon("plus")} Nuevo trabajo</button></div>${kpis()}<div class="tilegrid"><button class="tile" onclick="newTicket()"><span class="tile-icon">${uiIcon("plus")}</span><span><b>Nuevo trabajo</b><small>Reparación, venta o fabricación</small></span></button><button class="tile" onclick="go('servicios')"><span class="tile-icon">${uiIcon("list")}</span><span><b>Seguimiento</b><small>Servicios y órdenes</small></span></button><button class="tile" onclick="go('clientes')"><span class="tile-icon">${uiIcon("search")}</span><span><b>Buscar cliente</b><small>Ficha e historial</small></span></button></div><div class="dashboard-grid"><div><div class="section-head"><div><h2>Servicios recientes</h2><p class="small">${db.tickets.length} registros · Ordenados por correlativo</p></div><button class="button outline sm" onclick="go('servicios')">Ver todos ${uiIcon("arrow")}</button></div>${rowTickets([...db.tickets].sort((a, b) => b.id - a.id).slice(0, 8))}</div><aside class="dashboard-side"><div class="side-panel"><div class="row between" style="margin-bottom:7px"><h3>Cotizaciones</h3>${uiIcon("file")}</div><p>Documentos comerciales</p><button class="doc-shortcut" onclick="downloadSampleQuote()">${uiIcon("file")}<span><b>Cotización 261-26</b><small>Ejemplo · S/ 413.00</small></span><span class="download">↓</span></button><button class="doc-shortcut" onclick="downloadSampleSale()">${uiIcon("file")}<span><b>Cotización 256-26</b><small>Freightliner Century · S/ 2,300.00</small></span><span class="download">↓</span></button></div><div class="side-panel"><div class="row between" style="margin-bottom:8px"><h3>Control de atención</h3>${uiIcon("chart")}</div><p>Trabajos activos: <strong style="color:#172639">${active}</strong></p><p style="margin-top:7px">Servicios cerrados: <strong style="color:#172639">${db.tickets.filter((t) => t.status === "cerrado").length}</strong></p></div></aside></div>`;
   } else if (route === "servicios" || route === "cotizaciones") {
     let arr = db.tickets.filter((t) => {
       let s = (
@@ -495,7 +495,7 @@ function render() {
       )
       .join("")}</select></div>${rowTickets(arr.sort((a, b) => b.id - a.id))}`;
   } else if (route === "clientes") {
-    p.innerHTML = `<div class="section-head"><div><div class="eyebrow">DIRECTORIO</div><h1>Clientes</h1><p class="sub">${db.clients.length} clientes registrados</p></div><button class="button" onclick="addClient()">${uiIcon("plus")} Nuevo cliente</button></div><div class="card" style="margin:18px 0 14px;padding:17px"><label>Buscar cliente</label><input id="find-client" placeholder="RUC, DNI, nombre o contacto" oninput="renderClientList(this.value)"></div><div id="clients-list"></div>`;
+    p.innerHTML = `<div class="section-head"><div><div class="eyebrow">DIRECTORIO</div><h1>Clientes</h1><p class="sub">${db.clients.length} clientes registrados</p></div><div class="row wrap"><button class="button outline" onclick="openClientImport()">Importar clientes</button><button class="button" onclick="addClient()">${uiIcon("plus")} Nuevo cliente</button></div></div><div class="card" style="margin:18px 0 14px;padding:17px"><label>Buscar cliente</label><input id="find-client" placeholder="RUC, DNI, nombre o contacto" oninput="renderClientList(this.value)"></div><div id="clients-list"></div>`;
     renderClientList("");
   } else {
     p.innerHTML = `<div class="section-head"><h1>Inventario</h1></div><div class="card"><h2>Productos y materiales</h2></div>`;
@@ -507,7 +507,7 @@ function renderClientList(q) {
   let clients = db.clients.filter((c) =>
     normal(c.name + " " + c.id + " " + c.contact).includes(normal(q)),
   );
-  el.innerHTML = `<div class="tablebox"><table><thead><tr><th>Cliente</th><th>Documento</th><th>Contacto</th><th>Servicios</th><th></th></tr></thead><tbody>${clients.map((c) => `<tr><td><b>${esc(c.name)}</b></td><td>${c.type === "ruc" ? "RUC" : "DNI"} ${esc(c.id)}</td><td>${esc(c.contact || "—")}</td><td>${db.tickets.filter((t) => t.clientId === c.id).length}</td><td><button class="button outline sm" onclick="clientHistory('${esc(c.id)}')">Historial</button></td></tr>`).join("") || '<tr><td colspan="5" class="empty">Sin coincidencias.</td></tr>'}</tbody></table></div>`;
+  el.innerHTML = `<div class="tablebox"><table><thead><tr><th>Cliente</th><th>Documento</th><th>Contacto</th><th></th></tr></thead><tbody>${clients.map((c) => `<tr><td><b>${esc(c.name)}</b></td><td>${c.type === "ruc" ? "RUC" : "DNI"} ${esc(c.id)}</td><td>${esc(c.contact || "—")}</td><td><button class="button outline sm" onclick="clientHistory('${esc(c.id)}')">Historial</button></td></tr>`).join("") || '<tr><td colspan="4" class="empty">Sin coincidencias.</td></tr>'}</tbody></table></div>`;
 }
 function modalShow(body, small = false) {
   document.getElementById("modal-root").innerHTML =
@@ -521,7 +521,7 @@ function closeModal() {
 function newTicket() {
   modal = "new";
   modalShow(
-    `<div class="modal-head"><div><div class="eyebrow">NUEVO INGRESO</div><h2>Registrar trabajo</h2><p class="small">Recepción / solicitud</p></div><button class="xbtn" onclick="closeModal()">×</button></div><div class="modal-body"><div class="field"><label>Tipo de operación</label><div class="operation-choices"><label class="operation-choice"><input type="radio" name="new-kind" value="reparacion" checked onchange="updateKindForm()"><b>🔧 Reparación / mantenimiento</b><small>Evaluación + cotización + taller</small></label><label class="operation-choice"><input type="radio" name="new-kind" value="venta" onchange="updateKindForm()"><b>▣ Venta de radiadores, equipos y piezas nuevos</b><small>Catálogo + cotización + entrega</small></label><label class="operation-choice"><input type="radio" name="new-kind" value="fabricacion" onchange="updateKindForm()"><b>▤ Fabricación / conversión</b><small>Especificaciones + OT + entrega</small></label><label class="operation-choice"><input type="radio" name="new-kind" value="cotizacion" onchange="updateKindForm()"><b>Cotización independiente</b><small>Presupuesto directo sin evaluación</small></label></div></div><div class="field"><label>Cliente registrado</label><select id="new-client"><option value="">Seleccionar cliente...</option>${db.clients.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.id)}</option>`).join("")}</select><button class="button link sm" onclick="addClient(true)">＋ Registrar cliente nuevo</button></div><div class="fields2"><div class="field"><label id="new-equipment-label">Equipo / componente</label><input id="new-equipment" placeholder="Ej.: Radiador H2O motor Foton"></div><div class="field"><label id="new-serial-label">Placa, serie o código de producto</label><input id="new-serial" placeholder="Ej.: PL-000-000"></div></div><div class="field"><label id="new-condition-label">Condiciones de ingreso (opcional)</label><textarea id="new-condition" placeholder="Daños visibles, accesorios, guía de remisión..." style="min-height:65px"></textarea></div><div class="field" id="direct-ot-field" hidden><label><input type="checkbox" id="new-requires-ot"> Este servicio requiere orden de trabajo después de la aprobación</label><p class="small">Sin marcar: se confirma la entrega o conformidad y se registra el cobro, sin pasar por taller.</p></div><div class="hint" id="kind-help">Evaluación técnica y cotización</div><div class="row between"><span class="muted small">Correlativo: <b>${cid(db.next)}</b></span><button class="button" onclick="createTicket()">Guardar y continuar →</button></div></div>`,
+    `<div class="modal-head"><div><div class="eyebrow">NUEVO INGRESO</div><h2>Registrar trabajo</h2><p class="small">Recepción / solicitud</p></div><button class="xbtn" onclick="closeModal()">×</button></div><div class="modal-body"><div class="field"><label>Tipo de operación</label><div class="operation-choices"><label class="operation-choice"><input type="radio" name="new-kind" value="reparacion" checked onchange="updateKindForm()"><b>🔧 Reparación / mantenimiento</b><small>Evaluación + cotización + taller</small></label><label class="operation-choice"><input type="radio" name="new-kind" value="venta" onchange="updateKindForm()"><b>▣ Venta de radiadores, equipos y piezas nuevos</b><small>Catálogo + cotización + entrega</small></label><label class="operation-choice"><input type="radio" name="new-kind" value="fabricacion" onchange="updateKindForm()"><b>▤ Fabricación / conversión</b><small>Especificaciones + OT + entrega</small></label><label class="operation-choice"><input type="radio" name="new-kind" value="cotizacion" onchange="updateKindForm()"><b>Cotización independiente</b><small>Presupuesto directo sin evaluación</small></label></div></div><div class="field"><label>Cliente registrado</label><select id="new-client"><option value="">Seleccionar cliente...</option>${db.clients.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.id)}</option>`).join("")}</select><button class="button link sm" onclick="addClient(true)">＋ Registrar cliente nuevo</button></div><div class="fields2"><div class="field"><label id="new-equipment-label">Equipo / componente</label><input id="new-equipment" placeholder="Ej.: Radiador H2O motor Foton"></div><div class="field"><label id="new-serial-label">Placa, serie o código de producto</label><input id="new-serial" placeholder="Ej.: PL-000-000"></div></div><div class="field"><label id="new-condition-label">Condiciones de ingreso (opcional)</label><textarea id="new-condition" placeholder="Daños visibles y accesorios..." style="min-height:65px"></textarea></div><details class="quote-extra"><summary>Guía de remisión y fecha prevista</summary><div class="fields2"><label>Número de guía de remisión<input id="new-guide" maxlength="50" placeholder="Ej.: T001-123"></label><label>Fecha de emisión de la guía<input id="new-guide-date" type="date"></label><label>Fecha prevista de entrega<input id="new-delivery-date" type="date"></label></div></details><div class="field" id="direct-ot-field" hidden><label><input type="checkbox" id="new-requires-ot"> Este servicio requiere orden de trabajo después de la aprobación</label><p class="small">Sin marcar: se confirma la entrega o conformidad y se registra el cobro, sin pasar por taller.</p></div><div class="hint" id="kind-help">Evaluación técnica y cotización</div><div class="row between"><span class="muted small">Correlativo: <b>${cid(db.next)}</b></span><button class="button" onclick="createTicket()">Guardar y continuar →</button></div></div>`,
     true,
   );
   updateKindForm();
@@ -559,6 +559,8 @@ function createTicket() {
     condition = document.getElementById("new-condition").value.trim();
   if (!db.clients.some((c) => c.id === clientId) || !equip)
     return toast("Selecciona un cliente y registra el equipo o producto.");
+  if (document.getElementById("new-guide-date").value && !document.getElementById("new-guide").value.trim())
+    return toast("Completa el número de la guía de remisión.");
   let id = LexStore.nextId(db),
     t = {
       id,
@@ -570,6 +572,11 @@ function createTicket() {
       clientId,
       equipment: equip,
       serial,
+      guide: {
+        number: document.getElementById("new-guide").value.trim().toUpperCase(),
+        date: document.getElementById("new-guide-date").value,
+      },
+      promisedDelivery: document.getElementById("new-delivery-date").value,
       productCode: "",
       received: iso(),
       status: "evaluacion",
@@ -580,9 +587,15 @@ function createTicket() {
         lines: [],
         discount: 0,
         gross: null,
+        conditions: {
+          deadline: k === "fabricacion" ? "Según evaluación" : "1 día hábil",
+          validity: "7 días",
+          place: "Taller Lexsan Radiadores",
+          payment: paymentTerms(client(clientId)),
+        },
         terms: ["venta", "cotizacion"].includes(k)
-          ? "Entrega: 1 día hábil. Validez: 7 días. Pago: contado. Refrigerante recomendado: Prestone, Zerex Valvoline u otro; no Vistony. Usar gomas de soporte y pernos de seguridad operativos. Garantía: 6 meses por defecto de fábrica. No cubre oxidación interior, abolladuras ni fisuras del colector. Cambio de refrigerante: No."
-          : "Entrega según evaluación. Validez de oferta: 7 días. Lugar de entrega: Taller Lexsan Radiadores. Condición de pago: contado.",
+          ? "Refrigerante recomendado: Prestone, Zerex Valvoline u otro; no Vistony. Usar gomas de soporte y pernos de seguridad operativos. Garantía: 6 meses por defecto de fábrica. No cubre oxidación interior, abolladuras ni fisuras del colector. Cambio de refrigerante: No."
+          : "",
       },
       work: {
         responsible: "",
@@ -683,7 +696,7 @@ function clientHistory(id) {
       .filter((t) => t.clientId === id)
       .sort((a, b) => b.id - a.id);
   modalShow(
-    `<div class="modal-head"><div><div class="eyebrow">HISTORIAL COMERCIAL</div><h2>${esc(c.name)}</h2><p class="small">${c.type === "ruc" ? "RUC" : "DNI"} ${esc(c.id)} · ${arr.length} servicios registrados</p></div><button class="xbtn" onclick="closeModal()">×</button></div><div class="modal-body">${rowTickets(arr)}<div class="sep"></div><button class="button outline" onclick="closeModal();newTicket();document.getElementById('new-client').value='${esc(c.id)}'">＋ Nuevo ingreso para este cliente</button></div>`,
+    `<div class="modal-head"><div><div class="eyebrow">HISTORIAL COMERCIAL</div><h2>${esc(c.name)}</h2><p class="small">${c.type === "ruc" ? "RUC" : "DNI"} ${esc(c.id)} · ${arr.length + (c.serviceHistory?.length || 0)} registros</p></div><button class="xbtn" onclick="closeModal()">×</button></div><div class="modal-body">${clientStatement(c, arr)}${importedServiceHistory(c)}${arr.length ? rowTickets(arr) : !c.serviceHistory?.length ? "<p>Este cliente aún no tiene servicios registrados.</p>" : ""}<div class="sep"></div><button class="button outline" onclick="closeModal();newTicket();document.getElementById('new-client').value='${esc(c.id)}'">＋ Nuevo ingreso para este cliente</button></div>`,
   );
 }
 function stepsHTML(t) {
@@ -885,7 +898,7 @@ function updateTerms() {
   ticket(modal).quote.terms = document.getElementById("q-terms").value;
   save();
 }
-function sendQuote() {
+async function sendQuote() {
   let t = ticket(modal);
   if (t.status !== "evaluacion") return;
   for (const [id, key] of [
@@ -911,9 +924,11 @@ function sendQuote() {
     return toast(LexDomain.quoteError(t.quote));
   if (calc(t).gross <= 0)
     return toast("La cotización debe tener importe positivo.");
+  try { await ensureQuoteNumber(t); }
+  catch { return toast("No se pudo asignar el número de cotización. Revisa tu conexión."); }
+  if (modal !== t.id || t.status !== "evaluacion") return;
   t.quote.sentAt = new Date().toISOString();
   t.status = "aprobacion";
-  t.quote.number = t.quote.number || "COT-" + String(t.id).padStart(3, "0");
   event(
     t,
     (technical ? "Evaluación registrada y " : "") +
@@ -962,6 +977,7 @@ function deliver() {
   if (t.status !== "entrega") return;
   t.status = "documento";
   t.work.delivered = now();
+  t.work.deliveredDate = iso();
   event(
     t,
     "Entrega / conformidad registrada. Pendiente de comprobante y cobro.",

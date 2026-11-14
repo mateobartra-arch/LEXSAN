@@ -279,6 +279,7 @@ class LexPDF {
 function buildLexsanPDF(t, c, kind) {
   const pdf = new LexPDF();
   const brandImg = pdf.image(PDF_LEXSAN_LOGO, "LEXSAN_LOGO");
+  if (kind === "quote") c = { ...c, ...t.quote.customer };
   const v = calc(t),
     mLeft = 44,
     mRight = 551,
@@ -393,11 +394,11 @@ function buildLexsanPDF(t, c, kind) {
         8.4,
         12,
       );
-      if (c.contact || c.email || c.phone)
+      if (kind === "quote" || c.contact || c.email || c.phone)
         paragraph(
           "Contacto: " +
             (c.contact || "No registrado") +
-            " | Tel.: " +
+            " | Celular: " +
             (c.phone || "No registrado") +
             " | Correo: " +
             (c.email || "No registrado"),
@@ -420,6 +421,9 @@ function buildLexsanPDF(t, c, kind) {
       PDF_GRAY,
     );
     pdf.text("Página " + pageNumber, 550, 806, 7.7, false, PDF_GRAY, "right");
+    if (kind === "quote" && pageNumber === 1)
+      pdf.text("Esta cotización no constituye comprobante de pago ni autorización de trabajo.",
+        44, 820, 7.3, false, PDF_GRAY);
   }
   function room(height) {
     if (y + height > 772) {
@@ -444,6 +448,9 @@ function buildLexsanPDF(t, c, kind) {
   }
   header();
   if (kind === "quote") {
+    const seller = t.quote.seller || {};
+    const adviser = [seller.name, seller.email, seller.phone].filter(v => v?.trim());
+    if (adviser.length) paragraph("Asesoría: " + adviser.join(" | "), 8.5, 12);
     paragraph(
       "Moneda: soles (PEN). Precios unitarios e importes de ítems SIN IGV. " +
         (priceMode(t.quote) === "agreed"
@@ -468,7 +475,8 @@ function buildLexsanPDF(t, c, kind) {
     tableHeader();
     for (const item of t.quote.lines) {
       const desc = pdf.lines(
-        (item.category ? item.category + " / " : "") + item.desc,
+        (item.code?.trim() ? "Cód. " + item.code.trim() + " | " : "") +
+          (item.category ? item.category + " / " : "") + item.desc,
         292,
         9.3,
       );
@@ -522,11 +530,25 @@ function buildLexsanPDF(t, c, kind) {
         y += rowH;
       }
     }
-    if (t.vehicle?.brand || t.vehicle?.model) {
+    const vehicleName = [t.vehicle?.brand, t.vehicle?.model].filter(Boolean).join(" ");
+    const photo = quotePhotos.get(t);
+    if (photo) {
+      const name = pdf.image(photo.split(",")[1], "quote-photo");
+      const image = pdf.images.find(item => item.name === name);
+      if (image) {
+        const ratio = image.w / image.h;
+        const width = Math.min(245, 125 * ratio);
+        const height = width / ratio;
+        room(height + 50);
+        pdf.placeImage(name, 54, y + 8, width, height);
+        y += height + 12;
+      }
+    }
+    if (vehicleName) {
       y += 8;
       paragraph(
         "VEHÍCULO: " +
-          [t.vehicle.brand, t.vehicle.model].filter(Boolean).join(" "),
+          vehicleName,
         10,
         14,
       );
@@ -548,18 +570,25 @@ function buildLexsanPDF(t, c, kind) {
     pdf.text(fmt(v.gross), 541, y + 23, 12, true, [1, 1, 1], "right");
     y += 46;
     title("CONDICIONES COMERCIALES");
-    paragraph(t.quote.terms || "Condiciones comerciales por confirmar.");
-    room(45);
-    pdf.rect(44, y + 8, 507, 41, [1, 0.976, 0.958]);
-    pdf.text("IMPORTANTE", 54, y + 23, 8, true, PDF_ORANGE);
-    pdf.text(
-      "Esta cotización no constituye comprobante de pago ni autorización de trabajo.",
-      54,
-      y + 37,
-      8.5,
-    );
-    y += 54;
-    if (t.eval.fixes?.trim()) {
+    paragraph(quoteTermsText(t.quote) || "Condiciones comerciales por confirmar.");
+    const annex = t.quote.annex || {};
+    if (seller.bank?.trim()) {
+      title("DATOS PARA EL PAGO");
+      paragraph(seller.bank);
+    }
+    if ([annex.title, annex.body, annex.notes].some(value => value?.trim())) {
+      footer();
+      header(true);
+      title("DESCRIPCIÓN DEL SERVICIO");
+      paragraph(annex.title?.trim() || t.equipment || "Alcance del servicio");
+      const equipment = [vehicleName, t.serial && "Código / placa: " + t.serial].filter(Boolean);
+      if (equipment.length) paragraph(equipment.join(" | "));
+      if (annex.body?.trim()) paragraph(annex.body, 9.3, 14);
+      if (annex.notes?.trim()) {
+        title("NOTAS Y OBSERVACIONES");
+        paragraph(annex.notes);
+      }
+    } else if (t.eval.fixes?.trim()) {
       if (y + 75 > 748) {
         footer();
         header(true);
@@ -780,7 +809,7 @@ function docPrint(kind) {
     const number = (t.quote.number || cid(t.id)).replace(/[^a-zA-Z0-9-]/g, "_");
     pdfDownload(
       b,
-      `LEXSAN_${label}_${number}_Servicio_${String(t.id).padStart(3, "0")}.pdf`,
+      kind === "quote" ? quotationFilename(t) : `LEXSAN_${label}_${number}_Servicio_${String(t.id).padStart(3, "0")}.pdf`,
     );
     toast("PDF descargado correctamente. Revisa tu carpeta Descargas.");
   } catch (err) {
@@ -818,11 +847,16 @@ function downloadSampleQuote() {
     const b = buildLexsanPDF(t, client(t.clientId), "quote");
     pdfDownload(
       b,
-      `LEXSAN_Cotizacion_${String(t.quote.number || t.id).replace(/[^a-zA-Z0-9-]/g, "_")}.pdf`,
+      quotationFilename(t),
     );
     toast("Cotización PDF generada y descargada.");
   } catch (err) {
     console.error(err);
     toast("Error al generar la muestra: " + String(err.message || err));
   }
+}
+
+function quotationFilename(t) {
+  const clean = value => String(value || "").normalize("NFC").replace(/[<>:"/\\|?*\x00-\x1f]/g, " ").replace(/\s+/g, " ").trim().replace(/[. ]+$/, "").slice(0,120);
+  return clean(t.quote.number || "COT-" + String(t.id).padStart(3, "0")) + " - " + (clean(client(t.clientId).name) || "CLIENTE") + ".pdf";
 }

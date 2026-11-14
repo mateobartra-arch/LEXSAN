@@ -7,6 +7,7 @@ const commercialCommands = [
   "newQuote",
   "createTicket",
   "addClient",
+  "openClientImport",
   "saveClient",
   "addLine",
   "removeLine",
@@ -14,6 +15,12 @@ const commercialCommands = [
   "updatePrice",
   "setPricingMode",
   "saveVehicle",
+  "saveQuoteClient",
+  "saveQuoteConditions",
+  "searchQuoteRuc",
+  "repeatQuote",
+  "useQuoteSuggestion",
+  "applyRadiatorTerms",
   "selectQuoteCompany",
   "updateTerms",
   "applyTechnicalPreset",
@@ -226,6 +233,37 @@ function seedLocalProfiles() {
     db.users.find((u) => u.active);
   refreshProfileSelector();
 }
+let stopCloudWatch;
+function watchCloud(adapter) {
+  const waiting = new Map();
+  let timer;
+  function apply() {
+    timer = null;
+    if (!waiting.size || LexStore.failed) return;
+    if (modal !== null || LexStore.pending || LexStore.flight) {
+      timer = setTimeout(apply, 750);
+      return;
+    }
+    let changed = false;
+    for (const [group, records] of waiting) {
+      changed = adapter.mergeRemote(db, group, records) || changed;
+    }
+    waiting.clear();
+    if (changed) {
+      LexStore.committed = persistentRecord(db);
+      render();
+      LexStore.status("Sincronizado");
+    }
+  }
+  const unsubscribe = adapter.watch((group, records) => {
+    waiting.set(group, records);
+    if (!timer) timer = setTimeout(apply, 0);
+  }, () => LexStore.status("No se pudieron recibir cambios de Firebase", true));
+  return () => {
+    clearTimeout(timer);
+    unsubscribe();
+  };
+}
 async function startCloud() {
   const cfg = window.LEXSAN_CONFIG?.firebase;
   document.querySelector(".shell").hidden = true;
@@ -244,7 +282,49 @@ async function startCloud() {
     const { createFirebaseAdapter } = await import("./firebase-adapter.js");
     const adapter = await createFirebaseAdapter(cfg);
     LexStore.adapter = adapter;
-    document.getElementById("login-form").onsubmit = async (e) => {
+    function showWorkspace(result) {
+      db = result.data;
+      LexSession.user = result.user;
+      LexSession.ready = true;
+      LexStore.committed = persistentRecord(db);
+      box.remove();
+      document.querySelector(".shell").hidden = false;
+      refreshProfileSelector();
+      render();
+      LexStore.status("Datos cargados desde Firebase");
+      stopCloudWatch = watchCloud(adapter);
+    }
+    const form = document.getElementById("login-form");
+    const resetButton = document.createElement("button");
+    resetButton.type = "button";
+    resetButton.className = "button outline";
+    resetButton.textContent = "Crear o recuperar contraseña";
+    form.append(resetButton);
+    resetButton.onclick = async () => {
+      const email = document.getElementById("login-email");
+      const message = document.getElementById("login-message");
+      if (!email.reportValidity()) return;
+      resetButton.disabled = true;
+      try {
+        await adapter.resetPassword(email.value.trim());
+        message.textContent = "Si el correo está registrado, recibirás un enlace para configurar tu contraseña.";
+      } catch {
+        message.textContent = "No se pudo solicitar el enlace. Revisa la conexión e inténtalo de nuevo.";
+      } finally {
+        resetButton.disabled = false;
+      }
+    };
+    const loginButton = form.querySelector("button");
+    loginButton.disabled = true;
+    try {
+      const restored = await adapter.restoreSession();
+      if (restored) return showWorkspace(restored);
+    } catch {
+      document.getElementById("login-message").textContent = "Vuelve a iniciar sesión.";
+    } finally {
+      loginButton.disabled = false;
+    }
+    form.onsubmit = async (e) => {
       e.preventDefault();
       const button = e.target.querySelector("button");
       button.disabled = true;
@@ -253,15 +333,7 @@ async function startCloud() {
           document.getElementById("login-email").value,
           document.getElementById("login-password").value,
         );
-        db = result.data;
-        LexSession.user = result.user;
-        LexSession.ready = true;
-        LexStore.committed = JSON.stringify(db);
-        box.remove();
-        document.querySelector(".shell").hidden = false;
-        refreshProfileSelector();
-        render();
-        LexStore.status("Datos cargados desde Firebase");
+        showWorkspace(result);
       } catch (error) {
         document.getElementById("login-message").textContent =
           "No se pudo iniciar sesión. Revisa tus credenciales y permisos.";
@@ -278,6 +350,7 @@ async function logout() {
   try {
     await LexStore.flush();
     await LexStore.adapter.logout();
+    stopCloudWatch?.();
     location.reload();
   } catch (e) {
     toast("No se cerró la sesión: hay cambios sin guardar.");
