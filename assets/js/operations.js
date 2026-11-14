@@ -112,7 +112,7 @@ async function attachImage(input, target) {
   const t = ticket(modal),
     f = input.files?.[0];
   if (!t || !f) return;
-  if (target === "evaluation" && t.status !== "evaluacion") return;
+  if (["evaluation", "quotation"].includes(target) && t.status !== "evaluacion") return;
   if (!f.type.startsWith("image/") || f.size > 20 * 1024 * 1024)
     return toast("Elige una imagen de hasta 20 MB.");
   try {
@@ -134,6 +134,12 @@ async function attachImage(input, target) {
     canvas.height = Math.round(img.height * scale);
     canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
     const src = canvas.toDataURL("image/jpeg", 0.72);
+    if (target === "quotation") {
+      if (modal !== t.id || ticket(modal) !== t || t.status !== "evaluacion") return;
+      quotePhotos.set(t, src);
+      renderTicketModal();
+      return;
+    }
     if (target === "evaluation") t.eval.photos.push(src);
     else (t.receipts ||= []).push({ name: f.name, src, at: now() });
     save();
@@ -227,7 +233,7 @@ function saveDocument() {
     date = document.getElementById("doc-date").value;
   if (
     !new RegExp(
-      "^" + (type === "FACTURA" ? "F" : "B") + "[A-Z0-9]{3}-\\d{1,8}$",
+      (type === "FACTURA" ? "^(?:F[A-Z0-9]{3}|E001)" : "^B[A-Z0-9]{3}") + "-\\d{1,8}$",
     ).test(number) ||
     !date
   )

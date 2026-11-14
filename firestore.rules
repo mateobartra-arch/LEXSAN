@@ -26,6 +26,20 @@ service cloud.firestore {
    allow update: if office(org) && nextVersion() && validStock() && request.resource.data.payload.code == resource.data.payload.code;
    allow delete: if false;
   }
+  match /organizations/{org}/expenses/{id} {
+   function validExpense() {
+    let p = request.resource.data.payload;
+    return p.keys().hasOnly(['id','date','description','amount'])
+      && p.id is string && p.id == id
+      && p.date is string && p.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+      && p.description is string && p.description.size() > 0 && p.description.size() <= 140
+      && p.amount is number && p.amount > 0 && p.amount <= 1000000;
+   }
+   allow read: if office(org);
+   allow create: if office(org) && createVersion() && validExpense();
+   allow update: if office(org) && nextVersion() && validExpense();
+   allow delete: if false;
+  }
   match /organizations/{org}/tickets/{id} {
    function assigned(){return allowed(org) && resource.data.payload.work.assignedUid == request.auth.uid;}
    function safeTechnicalEdit(){
@@ -37,7 +51,9 @@ service cloud.firestore {
    }
    function validTicket(){let p=request.resource.data.payload;return p.id is number && p.clientId is string && p.equipment is string && p.paid is number && p.paid >= 0 && p.status in ['evaluacion','aprobacion','inicio','taller','entrega','documento','cerrado','rechazado'];}
    allow read: if office(org) || assigned();
-   allow create: if office(org) && createVersion() && validTicket() && request.resource.data.payload.status == 'evaluacion';
+   allow create: if office(org) && createVersion() && validTicket()
+    && (request.resource.data.payload.status == 'evaluacion'
+      || (request.resource.data.payload.quickSale == true && request.resource.data.payload.status in ['documento','cerrado']));
    allow update: if nextVersion() && validTicket() && request.resource.data.payload.id == resource.data.payload.id && (office(org) || (assigned() && safeTechnicalEdit()));
    allow delete: if false;
   }
@@ -46,6 +62,15 @@ service cloud.firestore {
    allow create: if office(org) && request.resource.data.keys().hasOnly(['ticketId']) && request.resource.data.ticketId is number;
    allow update: if office(org) && request.resource.data == resource.data;
    allow delete: if false;
+  }
+  match /organizations/{org}/settings/quoteSequence {
+   function validSequence() {
+    return request.resource.data.keys().hasOnly(['last'])
+      && request.resource.data.last is int && request.resource.data.last > 0;
+   }
+   allow read: if office(org);
+   allow create: if office(org) && validSequence();
+   allow update: if office(org) && validSequence() && request.resource.data.last > resource.data.last;
   }
  }
 }

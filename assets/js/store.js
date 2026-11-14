@@ -20,6 +20,7 @@ window.LexStore = {
       clients: [],
       tickets: [],
       inventory: [],
+      expenses: [],
     };
   },
   load(key, fresh) {
@@ -109,7 +110,7 @@ window.LexStore = {
     if (this.pending) return this.flush();
   },
   export() {
-    const blob = new Blob([JSON.stringify(db, null, 2)], {
+    const blob = new Blob([persistentRecord(db)], {
       type: "application/json",
     });
     pdfDownload(blob, "LEXSAN-respaldo-" + LexDomain.localDate() + ".json");

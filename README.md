@@ -1,13 +1,18 @@
-# LEXSAN — Demo local en GitHub Pages
+# Portal LEXSAN Radiadores
 
-Sube el CONTENIDO de esta carpeta a la raíz del repositorio: index.html, assets/, config/ y .nojekyll. No subas solo el HTML ni el ZIP sin descomprimir.
+Esta rama contiene el código fuente del portal.
 
-En GitHub: Settings → Pages → Deploy from a branch → main → /(root) → Save. Espera la publicación y abre el enlace que GitHub indique.
+## Abrir en desarrollo
 
-No necesita Firebase. PDF, cotizaciones, OT cuando corresponde, adelantos e inventario se ejecutan en el navegador. No se emiten comprobantes SUNAT.
+```powershell
+npm ci
+npm run dev
+```
 
-Cada navegador guarda sus propios datos; no hay sincronización. Los datos ingresados y las fotos no se suben al repositorio. No contiene respaldos ni datos exportados. Usar información ficticia para la demostración. El código y los ejemplos incluidos son públicos si publicas el repositorio.
+Abre http://127.0.0.1:4173. El servidor de desarrollo usa almacenamiento local y datos de ejemplo. Para trabajar con Claude Code, abre una terminal en la carpeta clonada y ejecuta `claude`.
 
-La demo usa una clave de almacenamiento separada de la versión local de operación. Cambiar de URL/file:// a GitHub Pages no migra registros existentes.
+## Firebase
 
-GitHub Pages se utiliza aquí para mostrar el prototipo, no como plataforma productiva de transacciones comerciales.
+El build de producción usa la configuración web de Firebase en `config/firebase.local.json`, excluida de Git. Ejecuta `node scripts/build.cjs --production` con la configuración del proyecto. Antes de publicar esa versión, despliega las reglas de Firestore de esta rama junto a Hosting, ya que el módulo Gastos usa una colección con acceso de administración y gerencia.
+
+La rama `main` contiene la demostración de GitHub Pages. `npm run build` y `node scripts/package-demo.cjs` generan el paquete estático actualizado para Pages.
