@@ -1,4 +1,10 @@
-# LEXSAN — Demo local en GitHub Pages
+# LEXSAN Radiadores
+
+- [Código fuente actualizado — rama portal-firebase](https://github.com/mateobartra-arch/LEXSAN/tree/portal-firebase). Incluye estado de cuenta por cliente, vencimientos y guías de remisión.
+- [Portal de trabajo con Firebase](https://lexsan-portal.web.app/). Requiere una cuenta del portal. La versión disponible depende del último despliegue en Firebase.
+- [Demostración de GitHub Pages](https://mateobartra-arch.github.io/LEXSAN/). Esta publicación corresponde a la versión de muestra en la rama `main`.
+
+## Demostración local en GitHub Pages
 
 Sube el CONTENIDO de esta carpeta a la raíz del repositorio: index.html, assets/, config/ y .nojekyll. No subas solo el HTML ni el ZIP sin descomprimir.
 
