@@ -13,8 +13,10 @@ function openExpense(id) {
   modal = "expense";
   modalShow(`<div class="modal-head"><h2>${current ? "Editar gasto" : "Nuevo gasto"}</h2><button class="xbtn" aria-label="Cerrar gasto" onclick="closeModal()">×</button></div>
   <div class="modal-body">
+    <div class="expense-drop" ondragover="expenseDrag(event,true)" ondragleave="expenseDrag(event,false)" ondrop="expenseDrop(event)">
+    <strong>Arrastra aquí una foto o un PDF</strong><p class="small">También puedes elegir un archivo o tomar una foto.</p>
     <div class="fields2"><label>Leer factura, boleta o voucher<input type="file" accept="application/pdf,image/*" onchange="readExpenseFile(this.files[0])"></label>
-    <label>Tomar foto<input type="file" accept="image/*" capture="environment" onchange="readExpenseFile(this.files[0])"></label></div>
+    <label>Tomar foto<input type="file" accept="image/*" capture="environment" onchange="readExpenseFile(this.files[0])"></label></div></div>
     <p class="small">Lee PDF o foto y revisa los campos. El OCR descarga su motor con internet y procesa la imagen en este dispositivo. El archivo se usa solo durante la lectura.</p>
     <p id="expense-read-status" role="status"></p>
     <details id="expense-text-panel" hidden><summary>Texto leído del documento</summary><pre id="expense-text" style="white-space:pre-wrap;max-height:220px;overflow:auto"></pre></details>
@@ -49,20 +51,109 @@ function openExpense(id) {
     </form></div>`);
 }
 editExpense = openExpense;
+
+let expenseFilters = {month: iso().slice(0,7), from: "", to: "", query: "", document: "", payment: ""};
+function expenseDrag(event, over) {
+  event.preventDefault();
+  event.currentTarget.classList.toggle("dragging", over);
+}
+function expenseDrop(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove("dragging");
+  const files=event.dataTransfer.files;
+  if(files.length!==1) {
+    document.getElementById("expense-read-status").textContent="Carga un comprobante por vez para revisar sus datos.";
+    return;
+  }
+  readExpenseFile(files[0]);
+}
+function expenseStatus(e) {
+  const paid=Number(e.paid)||0;
+  return paid>=e.amount ? "paid" : paid>0 ? "partial" : "unpaid";
+}
+function expenseHasDocument(e) {
+  return ["FACTURA","BOLETA"].includes(e.documentType) && Boolean(e.number);
+}
+function filteredExpenses() {
+  const f=expenseFilters;
+  return [...(db.expenses || [])].filter(e=>
+    (!f.month || e.date.startsWith(f.month)) &&
+    (!f.from || e.date>=f.from) && (!f.to || e.date<=f.to) &&
+    (!f.query || normal([e.supplier,e.ruc,e.number,e.description,e.operation].join(" ")).includes(normal(f.query))) &&
+    (!f.document || (f.document==="PENDIENTE" ? !expenseHasDocument(e) : e.documentType===f.document && expenseHasDocument(e))) &&
+    (!f.payment || expenseStatus(e)===f.payment)
+  ).sort((a,b)=>b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
+}
+function expensePeriod() {
+  return expenseFilters.month || [expenseFilters.from || "Inicio",expenseFilters.to || "Hoy"].join(" a ");
+}
+function applyExpenseFilters(form) {
+  if(!form.reportValidity())return;
+  const next=Object.fromEntries(new FormData(form).entries());
+  if(next.from && next.to && next.from>next.to) {
+    document.getElementById("expense-filter-error").textContent="La fecha inicial debe ser anterior o igual a la fecha final.";
+    return;
+  }
+  expenseFilters=next;
+  renderExpenses();
+}
+function expensePeriodChanged(form, source) {
+  if(source==="month"){form.elements.from.value="";form.elements.to.value="";}
+  else form.elements.month.value="";
+}
 renderExpenses = function () {
-  const entries = [...(db.expenses || [])].sort((a,b)=>b.date.localeCompare(a.date));
-  const month = iso().slice(0,7);
-  const total = entries.filter(e=>e.date.startsWith(month)).reduce((s,e)=>s+e.amount,0);
-  document.getElementById("page-top").textContent = "Compras y gastos";
-  document.getElementById("page").innerHTML = `<section class="home-start"><div class="section-head"><h1>Compras y gastos</h1><button class="button" onclick="openExpense()">＋ Nuevo gasto</button></div>
-    <p>Total del mes · <b>${fmt(total)}</b></p><div class="daily-pending">${entries.map(e=>{
-      const paid=Number(e.paid)||0, balance=Math.max(0,round(e.amount-paid));
-      return `<article class="card"><b>${esc(e.description)}</b><p>${esc(e.supplier || "Proveedor pendiente")} · ${esc(e.date)}</p>
-      <p>${esc(e.number || "Comprobante pendiente")} · Total ${fmt(e.amount)}</p>
-      <p>${balance ? "Por pagar " + fmt(balance) : "Pagado"}${!e.number ? " · Falta factura / boleta" : ""}</p>
+  const entries=filteredExpenses();
+  const sum=key=>round(entries.reduce((total,e)=>total+(Number(e[key])||0),0));
+  const balance=round(entries.reduce((total,e)=>total+Math.max(0,e.amount-(Number(e.paid)||0)),0));
+  const missing=entries.filter(e=>!expenseHasDocument(e)).length;
+  const breakdownMissing=entries.filter(e=>e.base===undefined || e.igv===undefined).length;
+  const field=(name,label,type="text")=>`<label>${label}<input name="${name}" type="${type}" value="${esc(expenseFilters[name])}" ${["month","date"].includes(type) ? `onchange="expensePeriodChanged(this.form,'${name}')"` : ""}></label>`;
+  const select=(name,label,options)=>`<label>${label}<select name="${name}">${options.map(([value,text])=>`<option value="${value}" ${expenseFilters[name]===value?"selected":""}>${text}</option>`).join("")}</select></label>`;
+  document.getElementById("page-top").textContent="Compras y gastos";
+  document.getElementById("page").innerHTML=`<section class="home-start expense-register">
+    <div class="section-head"><h1>Compras y gastos</h1><button class="button" onclick="openExpense()">＋ Nuevo gasto</button></div>
+    <form class="card expense-filters" onsubmit="event.preventDefault();applyExpenseFilters(this)">
+    <div class="fields3">${field("month","Mes","month")}${field("from","Corte desde","date")}${field("to","Corte hasta","date")}</div>
+    <div class="fields3">${field("query","Buscar proveedor, RUC o comprobante")}${select("document","Comprobante",[["","Todos"],["FACTURA","Factura"],["BOLETA","Boleta"],["PENDIENTE","Pendiente de sustento"]])}${select("payment","Pago",[["","Todos"],["paid","Pagado"],["partial","Pago parcial"],["unpaid","Por pagar"]])}</div>
+    <p class="small">Período según fecha de compra / emisión. «Corte desde / hasta» incluye ambos días. Pagos y saldos reflejan el estado actual de esas compras.</p>
+    <p id="expense-filter-error" role="alert"></p><div class="row wrap"><button class="button outline">Aplicar filtros</button><button class="button ghost" type="button" onclick="expenseFilters={month:'',from:'',to:'',query:'',document:'',payment:''};renderExpenses()">Ver todos</button></div></form>
+    <div class="detail"><b>${entries.length} registros · ${esc(expensePeriod())}</b>
+    <div class="totalrow"><span>Total compras</span><b>${fmt(sum("amount"))}</b></div>
+    <div class="totalrow"><span>Pagado acumulado</span><b>${fmt(sum("paid"))}</b></div>
+    <div class="totalrow"><span>Saldo por pagar</span><b>${fmt(balance)}</b></div>
+    <p>${missing} pendientes de factura / boleta · ${breakdownMissing} sin desglose completo de base e IGV</p>
+    <button class="button outline" onclick="exportExpenses()" ${entries.length?"":"disabled"}>Descargar registro para contador (CSV)</button></div>
+    <div class="daily-pending">${entries.map(e=>{
+      const paid=Number(e.paid)||0, due=Math.max(0,round(e.amount-paid));
+      return `<article class="card"><b>${esc(e.description)}</b><p>${esc(e.supplier || "Proveedor pendiente")} · ${esc(e.ruc || "RUC pendiente")}</p>
+      <p>${esc(e.date)} · ${esc(e.documentType || "Comprobante pendiente")} ${esc(e.number || "")}</p>
+      <p>Total ${fmt(e.amount)} · Pagado ${fmt(paid)} · Saldo ${fmt(due)}</p>
+      <p>${expenseHasDocument(e)?"Comprobante registrado":"Falta factura / boleta"}</p>
       <button class="button outline sm" onclick="openExpense('${esc(e.id)}')">Editar / adjuntar voucher</button></article>`;
-    }).join("") || "<p>Aún no hay gastos registrados.</p>"}</div></section>`;
+    }).join("") || "<p>No hay registros para los filtros seleccionados.</p>"}</div></section>`;
 };
+function exportExpenses() {
+  const columns=[
+    ["date","Fecha de compra / emisión"],["documentType","Tipo de comprobante"],["number","Serie y número"],
+    ["supplier","Proveedor / razón social"],["ruc","RUC"],["description","Descripción"],["quantity","Cantidad"],
+    ["unitPrice","Precio unitario"],["base","Base imponible"],["igv","IGV"],["discount","Descuento"],
+    ["amount","Monto total PEN"],["paid","Pagado acumulado PEN"],["balance","Saldo actual PEN"],
+    ["status","Estado de pago"],["support","Sustento"],["paymentDate","Fecha del pago"],
+    ["paymentMethod","Medio de pago"],["operation","Número de operación"],["order","Orden de compra"],
+    ["guide","Guía de remisión"],["phone","Celular proveedor"],["notes","Observaciones"]
+  ];
+  const rows=filteredExpenses().map(e=>({...e,paid:Number(e.paid)||0,
+    balance:round(Math.max(0,e.amount-(Number(e.paid)||0))),
+    status:{paid:"Pagado",partial:"Pago parcial",unpaid:"Por pagar"}[expenseStatus(e)],
+    support:expenseHasDocument(e)?"Comprobante registrado":"Pendiente de factura / boleta"}));
+  const cell=value=>{
+    const s=typeof value==="number"?String(value).replace(".",","):String(value??"");
+    return '"'+ (/^\s*[=+\-@]/.test(s)?"'":"")+s.replaceAll('"','""')+'"';
+  };
+  const content=[columns.map(([,title])=>title),...rows.map(e=>columns.map(([key])=>e[key]))];
+  pdfDownload(new Blob(["\uFEFF"+content.map(row=>row.map(cell).join(";")).join("\r\n")],{type:"text/csv;charset=utf-8"}),
+    "LEXSAN-compras-"+expensePeriod().replace(/[^0-9A-Za-z-]/g,"_")+".csv");
+}
 
 function expenseNumber(value) {
   const s=String(value || "").replace(/[^0-9.,-]/g,"");

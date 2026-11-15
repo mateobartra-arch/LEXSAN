@@ -771,3 +771,10 @@ input[type="password"] {
 .quote-conditions > summary { cursor: pointer; font-weight: 700; }
 .quote-conditions:not([open]) { padding-block: 12px; }
 .paper-customer #quote-company-data label { margin-top: 8px; }
+.expense-drop { padding:16px; margin-bottom:16px; border:2px dashed #b7c4d2; border-radius:12px; background:#f8fafc; }
+.expense-drop.dragging { border-color:#ef5b20; background:#fff4ed; }
+.expense-drop input { max-width:100%; }
+.expense-register .expense-filters { margin-bottom:16px; }
+.expense-register .daily-pending { margin-top:16px; }
+.expense-register .card { overflow-wrap:anywhere; }
+@media(max-width:600px) { .expense-filters .fields3 { grid-template-columns:1fr; } .expense-register .section-head { align-items:flex-start; flex-direction:column; gap:12px; } }
