@@ -572,9 +572,21 @@ function buildLexsanPDF(t, c, kind) {
     title("CONDICIONES COMERCIALES");
     paragraph(quoteTermsText(t.quote) || "Condiciones comerciales por confirmar.");
     const annex = t.quote.annex || {};
-    if (seller.bank?.trim()) {
-      title("DATOS PARA EL PAGO");
-      paragraph(seller.bank);
+    function structuredList(text, notes = false) {
+      const entries = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      entries.forEach((entry, index) => {
+        const clean = entry.replace(/^(?:[•\-–]\s*|\d+[.)]\s*|NOTA\s*\d+\s*:\s*)/i, "");
+        const lines = pdf.lines(clean, notes ? 435 : 474, 9.3);
+        room(Math.min(lines.length * 14 + 8, 120));
+        pdf.text(notes ? "NOTA " + String(index + 1).padStart(2, "0") + ":" : "•",
+          48, y + 10, 9.3, true, notes ? PDF_ORANGE : PDF_BLACK);
+        for (const line of lines) {
+          room(18);
+          pdf.text(line, notes ? 108 : 64, y + 10, 9.3);
+          y += 14;
+        }
+        y += notes ? 8 : 4;
+      });
     }
     if ([annex.title, annex.body, annex.notes].some(value => value?.trim())) {
       footer();
@@ -583,10 +595,10 @@ function buildLexsanPDF(t, c, kind) {
       paragraph(annex.title?.trim() || t.equipment || "Alcance del servicio");
       const equipment = [vehicleName, t.serial && "Código / placa: " + t.serial].filter(Boolean);
       if (equipment.length) paragraph(equipment.join(" | "));
-      if (annex.body?.trim()) paragraph(annex.body, 9.3, 14);
+      if (annex.body?.trim()) structuredList(annex.body);
       if (annex.notes?.trim()) {
         title("NOTAS Y OBSERVACIONES");
-        paragraph(annex.notes);
+        structuredList(annex.notes, true);
       }
     } else if (t.eval.fixes?.trim()) {
       if (y + 75 > 748) {
@@ -595,6 +607,11 @@ function buildLexsanPDF(t, c, kind) {
       }
       title("ALCANCE TÉCNICO RECOMENDADO");
       paragraph(t.eval.fixes, 8.9, 12.5);
+    }
+    if (seller.bank?.trim()) {
+      room(75);
+      title("CUENTAS BANCARIAS / DATOS PARA EL PAGO");
+      paragraph(seller.bank, 9.3, 14);
     }
     footer();
   } else if (kind === "eval") {

@@ -445,7 +445,8 @@ function quoteAnnexEditor(t, editable) {
     ${editable ? '<button class="button outline sm" onclick="fillMaintenanceScope()">Usar plantilla de mantenimiento</button>' : ""}
     <label>Título del servicio<input maxlength="180" value="${esc(title)}" ${disabled} oninput="setQuoteField('annex','title',this.value)"></label>
     <label>Alcance del servicio<textarea id="quote-annex-body" rows="6" maxlength="10000" placeholder="Escribe un paso por línea" ${disabled} oninput="setQuoteField('annex','body',this.value)">${esc(body)}</textarea></label>
-    <label>Notas y observaciones<textarea rows="3" maxlength="4000" ${disabled} oninput="setQuoteField('annex','notes',this.value)">${esc(notes)}</textarea></label>
+    <p class="small">Escribe un paso por línea. El PDF colocará las viñetas automáticamente.</p>
+    <label>Notas y observaciones<textarea rows="3" maxlength="4000" placeholder="Una nota por línea; se numerarán automáticamente en el PDF" ${disabled} oninput="setQuoteField('annex','notes',this.value)">${esc(notes)}</textarea></label>
     ${editable && t.eval?.fixes ? '<button class="button outline sm" onclick="fillMaintenanceScope(true)">Usar procedimiento de la evaluación</button>' : ""}</details>`;
 }
 function fillMaintenanceScope(fromEvaluation = false) {
@@ -460,5 +461,5 @@ function quoteExtraFields(t, editable) {
   return `<details class="quote-extra"><summary>Asesoría y datos para el pago</summary>
     <div class="fields2">${[["name","Asesor(a)"],["email","Correo"],["phone","Celular"]].map(([key,label]) =>
       `<label>${label}<input maxlength="120" value="${esc(seller[key] || "")}" ${disabled} oninput="setQuoteField('seller','${key}',this.value)"></label>`).join("")}</div>
-    <label>Datos bancarios confirmados<textarea maxlength="1500" ${disabled} placeholder="Titular, banco, moneda, cuenta y CCI" oninput="setQuoteField('seller','bank',this.value)">${esc(seller.bank || "")}</textarea></label></details>`;
+    <label>Cuentas bancarias para el PDF<textarea rows="5" maxlength="1500" ${disabled} placeholder="Titular, banco, moneda, cuenta y CCI. Escribe cada cuenta en líneas separadas." oninput="setQuoteField('seller','bank',this.value)">${esc(seller.bank || "")}</textarea></label><p class="small">Aparecerán al final de la cotización, después de las notas del servicio. Completa únicamente las cuentas confirmadas.</p></details>`;
 }
