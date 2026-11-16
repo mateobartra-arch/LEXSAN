@@ -1,19 +1,9 @@
-# LEXSAN Radiadores
+# LEXSAN — Portal conectado a Firebase
 
-- [Código fuente actualizado — rama portal-firebase](https://github.com/mateobartra-arch/LEXSAN/tree/portal-firebase). Incluye estado de cuenta por cliente, vencimientos y guías de remisión.
-- [Portal de trabajo con Firebase](https://lexsan-portal.web.app/). Requiere una cuenta del portal. La versión disponible depende del último despliegue en Firebase.
-- [Demostración de GitHub Pages](https://mateobartra-arch.github.io/LEXSAN/). Esta publicación corresponde a la versión de muestra en la rama `main`.
+Portal de trabajo: https://lexsan-portal.web.app/
 
-## Demostración local en GitHub Pages
+GitHub Pages: https://mateobartra-arch.github.io/LEXSAN/
 
-Sube el CONTENIDO de esta carpeta a la raíz del repositorio: index.html, assets/, config/ y .nojekyll. No subas solo el HTML ni el ZIP sin descomprimir.
+Ambos usan el proyecto Firebase lexsan-portal. Inicia sesión con tu usuario del portal. Esta rama contiene la aplicación compilada para publicación. El código fuente, las pruebas y las reglas están en la rama portal-firebase.
 
-En GitHub: Settings → Pages → Deploy from a branch → main → /(root) → Save. Espera la publicación y abre el enlace que GitHub indique.
-
-No necesita Firebase. PDF, cotizaciones, OT cuando corresponde, adelantos e inventario se ejecutan en el navegador. No se emiten comprobantes SUNAT.
-
-Cada navegador guarda sus propios datos; no hay sincronización. Los datos ingresados y las fotos no se suben al repositorio. No contiene respaldos ni datos exportados. Usar información ficticia para la demostración. El código y los ejemplos incluidos son públicos si publicas el repositorio.
-
-La demo usa una clave de almacenamiento separada de la versión local de operación. Cambiar de URL/file:// a GitHub Pages no migra registros existentes.
-
-GitHub Pages se utiliza aquí para mostrar el prototipo, no como plataforma productiva de transacciones comerciales.
+Actualizado el 16/11/2026: activada la conexión Firebase en GitHub Pages y retirados los accesos al HTML antiguo. Incluye cotizaciones PDF con anexo, viñetas y notas, compras y gastos con lectura de comprobantes y filtros para el contador. Los datos ingresados previamente en modo local no se migran automáticamente a Firebase; conserva los respaldos del navegador.

@@ -1,1 +1,1 @@
-window.LEXSAN_CONFIG = {mode:"local",firebase:null,demo:true};
+window.LEXSAN_CONFIG={"mode":"firebase","firebase":{"projectId":"lexsan-portal","appId":"1:473069566917:web:56c21ae76312c446cca9ac","storageBucket":"lexsan-portal.firebasestorage.app","apiKey":"AIzaSyA7cWwF-T9aJZwLb5hRIKU8rrYAidSYvsQ","authDomain":"lexsan-portal.firebaseapp.com","messagingSenderId":"473069566917","projectNumber":"473069566917","version":"2"}};
