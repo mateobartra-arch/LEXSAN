@@ -292,8 +292,9 @@ function renderClientList(q) {
   let el = document.getElementById("clients-list");
   if (!el) return;
   let clients = db.clients.filter((c) =>
-    normal(c.name + " " + c.id + " " + c.contact).includes(normal(q)),
+    normal(c.name + " " + c.id + " " + c.contact + " " + (c.aliases || []).join(" ")).includes(normal(q)),
   );
+  clients.sort((a,b)=>a.name.localeCompare(b.name,"es"));
   el.innerHTML = `<div class="tablebox"><table><thead><tr><th>Cliente</th><th>Documento</th><th>Contacto</th><th></th></tr></thead><tbody>${clients.map((c) => `<tr><td><b>${esc(c.name)}</b></td><td>${c.type === "ruc" ? "RUC" : "DNI"} ${esc(c.id)}</td><td>${esc(c.contact || "—")}</td><td><button class="button outline sm" onclick="clientHistory('${esc(c.id)}')">Historial</button></td></tr>`).join("") || '<tr><td colspan="4" class="empty">Sin coincidencias.</td></tr>'}</tbody></table></div>`;
 }
 function modalShow(body, small = false) {
