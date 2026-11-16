@@ -106,3 +106,9 @@ test("report uses actual approved/invoiced records", () => {
     averageDays: 2,
   });
 });
+test("detailed costs add overhead before discount and IGV; base display keeps debt total", () => {
+  const q = {lines:[{desc:"Material",qty:2,price:100},{desc:"Trabajo",qty:1,price:50}], discount:10,format:"detailed",overheadPercent:16,pricingMode:"items",presentation:"base"};
+  assert.deepEqual(D.quoteTotals(q),{sum:250,discount:10,overhead:40,base:280,gross:330.4,igv:50.4,adjust:0});
+  assert.equal(D.quoteError({...q,overheadPercent:-1}),"Los gastos generales y utilidad deben estar entre 0 y 100 %.");
+  assert.equal(D.quoteTotals({...q,format:"standard"}).gross,283.2);
+});

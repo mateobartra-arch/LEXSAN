@@ -41,17 +41,24 @@ function searchQuoteRuc(value) {
   const byDocument = /^\d+$/.test(query);
   const matches = query ? db.clients.filter(c => byDocument
     ? c.id.startsWith(query)
-    : normal(c.name).includes(normal(query))).slice(0, 6) : [];
+    : normal(c.name + " " + (c.aliases || []).join(" ")).includes(normal(query))).slice(0, 6) : [];
   document.getElementById("quote-ruc-results").innerHTML = matches.map(c=>`<button class="quote-history-option" onclick="selectQuoteCompany('${esc(c.id)}')"><b>${esc(c.name)}</b><span>${esc(c.id)}</span></button>`).join("") || (query ? '<p class="small">No figura en los clientes registrados. Puedes añadirlo en «Cliente nuevo».</p>' : "");
   const exact = matches.find(c => c.id === query && /^\d{11}$/.test(query));
   if (exact) {
+    if (t.quote.number && t.clientId !== exact.id) return toast("Crea otra cotización para cambiar de cliente.");
     const previousId = t.clientId;
+    if (previousId !== exact.id) {
+      delete t.quote.nextNumber;
+      t.quote.format = db.quoteLibrary?.profiles?.[exact.id]?.format || "standard";
+      t.quote.presentation = db.quoteLibrary?.profiles?.[exact.id]?.presentation || "total";
+    }
     applyCustomerPayment(t, exact.id);
     t.clientId = exact.id;
     document.getElementById("quote-company").value = exact.id;
     if (previousId !== exact.id) t.quote.customer = {};
     document.getElementById("quote-company-data").innerHTML = quoteContactFields(t, exact, true);
     save();
+    if (previousId !== exact.id) renderTicketModal();
   }
 }
 function quoteHistory() {
@@ -339,7 +346,7 @@ function saveTechnicalDetails() {
 
 function quotePaperHeader(t, editable) {
   const c = db.clients.find((c) => c.id === t.clientId);
-  return `<header class="paper-letterhead"><img src="${LOGO}" alt="LEXSAN"><div><b>LEXSAN RADIADORES S.A.C.</b><p>Cotización editable</p></div><strong>${esc(t.quote.number || cid(t.id))}</strong></header><div class="quote-ruc-search"><label>Buscar empresa por RUC o nombre<input id="quote-ruc" maxlength="120" value="${esc(c?.type === 'ruc' ? c.id : '')}" placeholder="Escribe el RUC o el nombre…" ${editable ? "" : "disabled"} oninput="searchQuoteRuc(this.value)"></label><div id="quote-ruc-results" aria-live="polite"></div></div><div class="paper-customer"><label>Seleccionar empresa por nombre<select id="quote-company" ${editable ? "" : "disabled"} onchange="selectQuoteCompany(this.value)"><option value="">Seleccionar empresa o cliente</option>${db.clients.map((c) => `<option value="${esc(c.id)}" ${c.id === t.clientId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label><div id="quote-company-data">${c ? quoteContactFields(t, c, editable) : "Los datos del cliente aparecerán aquí."}</div></div>${editable ? `<details class="quote-new-client"><summary>＋ Cliente nuevo</summary><div class="fields2"><label>RUC o DNI<input id="quote-client-id" inputmode="numeric" maxlength="11"></label><label>Nombre / razón social<input id="quote-client-name"></label><label>Persona de contacto<input id="quote-new-contact"></label><label>Celular<input id="quote-new-phone" type="tel"></label></div><button class="button outline" onclick="saveQuoteClient()">Usar este cliente</button><p id="quote-client-error" role="alert"></p></details>` : ""}<label>Título de la cotización (opcional)<input id="quote-subject" value="${esc(t.equipment)}" ${editable ? "" : "disabled"} oninput="ticket(modal).equipment=this.value;save()" placeholder="Ej.: Venta de radiador de H2O"></label>`;
+  return `<header class="paper-letterhead"><img src="${LOGO}" alt="LEXSAN"><div><b>LEXSAN RADIADORES S.A.C.</b><p>Cotización editable</p></div><strong>${esc(t.quote.number || cid(t.id))}</strong></header><div class="quote-ruc-search"><label>Buscar empresa por RUC o nombre<input id="quote-ruc" maxlength="120" value="${esc(c?.type === 'ruc' ? c.id : '')}" placeholder="Escribe el RUC o el nombre…" ${editable ? "" : "disabled"} oninput="searchQuoteRuc(this.value)"></label><div id="quote-ruc-results" aria-live="polite"></div></div><div class="paper-customer"><label>Seleccionar empresa por nombre<select id="quote-company" ${editable ? "" : "disabled"} onchange="selectQuoteCompany(this.value)"><option value="">Seleccionar empresa o cliente</option>${[...db.clients].sort((a,b)=>a.name.localeCompare(b.name,"es")).map((c) => `<option value="${esc(c.id)}" ${c.id === t.clientId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label><div id="quote-company-data">${c ? quoteContactFields(t, c, editable) : "Los datos del cliente aparecerán aquí."}</div></div>${editable ? `<details class="quote-new-client"><summary>＋ Cliente nuevo</summary><div class="fields2"><label>RUC o DNI<input id="quote-client-id" inputmode="numeric" maxlength="11"></label><label>Nombre / razón social<input id="quote-client-name"></label><label>Persona de contacto<input id="quote-new-contact"></label><label>Celular<input id="quote-new-phone" type="tel"></label></div><button class="button outline" onclick="saveQuoteClient()">Usar este cliente</button><p id="quote-client-error" role="alert"></p></details>` : ""}<label>Título de la cotización (opcional)<input id="quote-subject" value="${esc(t.equipment)}" ${editable ? "" : "disabled"} oninput="ticket(modal).equipment=this.value;save()" placeholder="Ej.: Venta de radiador de H2O"></label>`;
 }
 function selectQuoteCompany(id) {
   const t = ticket(modal);
@@ -394,7 +401,8 @@ newQuote = function (sourceId) {
     t.clientId = source.clientId;
     t.equipment = source.equipment;
     t.vehicle = structuredClone(source.vehicle || {brand: "", model: ""});
-    t.quote.lines = source.quote.lines.map(l => ({desc: l.desc, qty: l.qty, price: l.price, ...(l.code ? {code: l.code} : {}), ...(l.category ? {category: l.category} : {})}));
+    t.quote.lines = source.quote.lines.map(l => ({desc: l.desc, qty: l.qty, price: l.price, ...(l.code ? {code: l.code} : {}), ...(l.category ? {category: l.category} : {}), ...(l.costGroup ? {costGroup: l.costGroup} : {}), ...(l.unit ? {unit: l.unit} : {})}));
+    for (const key of ["format", "presentation", "overheadPercent"]) if (source.quote[key] !== undefined) t.quote[key] = source.quote[key];
     t.quote.terms = source.quote.terms || "";
     if (source.quote.annex?.body) t.quote.annex = {body: source.quote.annex.body};
     if (source.quote.seller) t.quote.seller = structuredClone(source.quote.seller);

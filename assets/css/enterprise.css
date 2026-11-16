@@ -778,3 +778,9 @@ input[type="password"] {
 .expense-register .daily-pending { margin-top:16px; }
 .expense-register .card { overflow-wrap:anywhere; }
 @media(max-width:600px) { .expense-filters .fields3 { grid-template-columns:1fr; } .expense-register .section-head { align-items:flex-start; flex-direction:column; gap:12px; } }
+.quote-assistant{padding:16px;background:#fff8f3;border:1px solid #ffcfb8;border-radius:10px;margin:16px 0}
+.quote-assistant select{max-width:100%;width:100%}
+.quote-bank-row{padding:12px;margin:10px 0;border:1px solid #dce2ea;border-radius:8px}
+.quote-bank-row input{min-width:0}
+.quote-assistant .small,.quote-bank .small{line-height:1.5}
+@media(max-width:600px){.quote-bank .fields2{grid-template-columns:1fr}.quote-assistant .fields2{grid-template-columns:1fr}}

@@ -455,7 +455,7 @@ function buildLexsanPDF(t, c, kind) {
       "Moneda: soles (PEN). Precios unitarios e importes de ítems SIN IGV. " +
         (priceMode(t.quote) === "agreed"
           ? "Total acordado con IGV; ajuste comercial detallado al pie."
-          : "El IGV se agrega en el resumen."),
+          : t.quote.presentation === "base" ? "No incluye IGV; agregar 18 % al facturar." : "El IGV se agrega en el resumen."),
       8.5,
       12,
     );
@@ -473,10 +473,24 @@ function buildLexsanPDF(t, c, kind) {
       y += 26;
     }
     tableHeader();
-    for (const item of t.quote.lines) {
+    const detailed = t.quote.format === "detailed";
+    const costGroups = ["Materiales", "Equipos utilizados", "Mano de obra", "Suministros"];
+    const quoteLines = detailed ? [...t.quote.lines].sort((a,b) => costGroups.indexOf(a.costGroup || "Materiales") - costGroups.indexOf(b.costGroup || "Materiales")) : t.quote.lines;
+    let previousGroup = "";
+    for (const item of quoteLines) {
+      const group = item.costGroup || "Materiales";
+      if (detailed && group !== previousGroup) {
+        if (y + 60 > 730) { footer(); header(true); tableHeader(); }
+        pdf.rect(mLeft, y, tableWidth, 24, PDF_LIGHT);
+        pdf.text(group.toUpperCase(), 54, y + 16, 9, true);
+        const subtotal = quoteLines.filter(l => (l.costGroup || "Materiales") === group).reduce((sum,l) => sum + round(l.qty * l.price), 0);
+        pdf.text(fmt(round(subtotal)), 539, y + 16, 9, true, PDF_BLACK, "right");
+        y += 24;
+        previousGroup = group;
+      }
       const desc = pdf.lines(
         (item.code?.trim() ? "Cód. " + item.code.trim() + " | " : "") +
-          (item.category ? item.category + " / " : "") + item.desc,
+          (item.category ? item.category + " / " : "") + item.desc + (detailed ? " · Unidad: " + (item.unit || "und") : ""),
         292,
         9.3,
       );
@@ -554,21 +568,23 @@ function buildLexsanPDF(t, c, kind) {
       );
     }
     y += 16;
-    room(v.adjust ? 177 : 155);
+    room((v.adjust ? 177 : 155) + (v.overhead ? 22 : 0));
     function moneyRow(label, value, bold = false) {
-      pdf.text(label, 310, y + 14, 9.3, bold);
+      pdf.text(label, 310, y + 14, Math.min(9.3, 175 / pdf.measure(label, 1, bold)), bold);
       pdf.text(fmt(value), 539, y + 14, 9.3, bold, PDF_BLACK, "right");
       y += 22;
     }
     moneyRow("Suma de ítems sin IGV", v.sum);
+    if (v.overhead) moneyRow("Gastos generales y utilidad " + t.quote.overheadPercent + "%", v.overhead);
     moneyRow("Descuento sin IGV", -v.discount);
     if (v.adjust) moneyRow("Ajuste comercial sin IGV", v.adjust);
     moneyRow("Neto sin IGV (base imponible)", v.base);
-    moneyRow("IGV (18%)", v.igv);
+    if (t.quote.presentation !== "base") moneyRow("IGV (18%)", v.igv);
     pdf.rect(300, y, 251, 35, PDF_ORANGE);
-    pdf.text("TOTAL CON IGV", 310, y + 23, 10.5, true, [1, 1, 1]);
-    pdf.text(fmt(v.gross), 541, y + 23, 12, true, [1, 1, 1], "right");
+    pdf.text(t.quote.presentation === "base" ? "TOTAL SIN IGV" : "TOTAL CON IGV", 310, y + 23, 10.5, true, [1, 1, 1]);
+    pdf.text(fmt(t.quote.presentation === "base" ? v.base : v.gross), 541, y + 23, 12, true, [1, 1, 1], "right");
     y += 46;
+    if (t.quote.presentation === "base") paragraph("Importes sin IGV. Agregar IGV del 18 % al facturar.", 8.5, 12);
     title("CONDICIONES COMERCIALES");
     paragraph(quoteTermsText(t.quote) || "Condiciones comerciales por confirmar.");
     const annex = t.quote.annex || {};
@@ -608,7 +624,28 @@ function buildLexsanPDF(t, c, kind) {
       title("ALCANCE TÉCNICO RECOMENDADO");
       paragraph(t.eval.fixes, 8.9, 12.5);
     }
-    if (seller.bank?.trim()) {
+    if (t.quote.bankAccounts?.length) {
+      room(115);
+      title("CUENTAS BANCARIAS / DATOS PARA EL PAGO");
+      const columns = [44, 159, 224, 267, 397], widths = [115,65,43,130,154];
+      const fields = ["holder", "bank", "currency", "account", "cci"];
+      function bankHeader() {
+        pdf.rect(44,y,507,25,PDF_BLACK);
+        ["TITULAR", "BANCO", "MONEDA", "NÚMERO DE CUENTA", "CCI"].forEach((label,i) => pdf.text(label,columns[i]+5,y+16,7.2,true,[1,1,1]));
+        y += 25;
+      }
+      bankHeader();
+      for (const account of t.quote.bankAccounts) {
+        const cells = fields.map((key,i) => pdf.lines(account[key] || "—", widths[i]-10, 8));
+        const height = Math.max(33, ...cells.map(lines => lines.length*11+14));
+        if (y + height > 772) {footer();header(true);bankHeader();}
+        pdf.rect(44,y,507,height,PDF_LIGHT);
+        cells.forEach((lines,i) => lines.forEach((line,j) => pdf.text(line,columns[i]+5,y+15+j*11,8)));
+        for (const x of [...columns,551]) pdf.line(x,y,x,y+height,[0.8,0.8,0.8]);
+        pdf.line(44,y+height,551,y+height,[0.8,0.8,0.8]);y+=height;
+      }
+      y += 12;
+    } else if (seller.bank?.trim()) {
       room(75);
       title("CUENTAS BANCARIAS / DATOS PARA EL PAGO");
       paragraph(seller.bank, 9.3, 14);

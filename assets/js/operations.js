@@ -422,8 +422,8 @@ if (!document.querySelector('[data-route="inventario"]')) {
 }
 
 function defaultPaymentDays(customer) {
-  return customer?.id === "20100814162" ||
-    /\braciemsa\b|racionalizacion empresarial/.test(normal(customer?.name || "")) ? 30 : 0;
+  const days = Number(customer?.paymentDays ?? db.quoteLibrary?.profiles?.[customer?.id]?.paymentDays ?? 0);
+  return Number.isInteger(days) && days >= 0 && days <= 365 ? days : 0;
 }
 function paymentTerms(customer) {
   const days = defaultPaymentDays(customer);

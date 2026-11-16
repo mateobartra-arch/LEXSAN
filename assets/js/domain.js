@@ -11,7 +11,8 @@
   function quoteTotals(q) {
     const sum = money(q.lines.reduce((n, l) => n + money(l.qty * l.price), 0)),
       discount = money(q.discount || 0);
-    let base = money(sum - discount),
+    const overhead = q.format === "detailed" ? money(sum * Number(q.overheadPercent || 0) / 100) : 0;
+    let base = money(sum + overhead - discount),
       gross = money(base * 1.18);
     if (
       q.pricingMode !== "items" &&
@@ -25,13 +26,16 @@
     return {
       sum,
       discount,
+      ...(q.format === "detailed" ? { overhead } : {}),
       base,
       gross,
       igv: money(gross - base),
-      adjust: money(base - (sum - discount)),
+      adjust: money(base - (sum + overhead - discount)),
     };
   }
   function quoteError(q) {
+    if (q.format === "detailed" && (!Number.isFinite(Number(q.overheadPercent || 0)) || Number(q.overheadPercent || 0) < 0 || Number(q.overheadPercent || 0) > 100))
+      return "Los gastos generales y utilidad deben estar entre 0 y 100 %.";
     if (q.pricingReview)
       return "Revisa el total anterior: elige cálculo por ítems o confirma el total acordado.";
     if (

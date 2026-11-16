@@ -1,3 +1,4 @@
+import { reserveWithRetry } from "./sequence-retry.mjs";
 /* Entity revisions prevent silent last-writer-wins overwrites. */
 import { initializeApp } from "firebase/app";
 import {
@@ -100,6 +101,10 @@ export async function createFirebaseAdapter(config) {
       ),
     );
     result.users = members.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    if (user.role !== "tecnico") {
+      const library = await getDoc(doc(firestore, prefix + "/settings/quoteLibrary"));
+      result.quoteLibrary = library.exists() ? library.data() : {};
+    }
     return result;
   }
   async function openSession(account) {
@@ -139,15 +144,42 @@ export async function createFirebaseAdapter(config) {
         return next;
       });
     },
+    async reserveClientQuoteNumber(clientId, year, minimum) {
+      if (!/^\d{8,11}$/.test(clientId) || !/^20\d{2}$/.test(String(year)) || !Number.isInteger(minimum) || minimum < 1 || minimum > 999999)
+        throw Error("Revisa el cliente y la numeración.");
+      const ref = doc(firestore, prefix + "/quoteSequences/" + clientId + "-" + year);
+      return reserveWithRetry(() => runTransaction(firestore, async tx => {
+        const snapshot = await tx.get(ref);
+        const next = Math.max(minimum, (snapshot.data()?.last || 0) + 1);
+        if (next > 999999) throw Error("La numeración excede el límite.");
+        tx.set(ref, { last: next });
+        return next;
+      }));
+    },
+    async saveBankAccounts(bankAccounts) {
+      const ref = doc(firestore, prefix + "/settings/quoteLibrary");
+      await runTransaction(firestore, async tx => {
+        const current = await tx.get(ref);
+        tx.set(ref, { ...(current.data() || {}), bankAccounts });
+      });
+    },
     watch(receive, onError) {
       const stop = groups().map(group =>
         onSnapshot(sourceFor(group), { includeMetadataChanges: true }, snapshot => {
           if (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) return;
           receive(group, snapshot.docs.map(snap => ({ path: snap.ref.path, ...snap.data() })));
         }, onError));
+      if (user.role !== "tecnico") stop.push(onSnapshot(doc(firestore, prefix + "/settings/quoteLibrary"), snapshot => {
+        if (!snapshot.metadata.fromCache) receive("quoteLibrary", snapshot.data() || {});
+      }, onError));
       return () => stop.forEach(unsubscribe => unsubscribe());
     },
     mergeRemote(data, group, records) {
+      if (group === "quoteLibrary") {
+        const changed = JSON.stringify(data.quoteLibrary || {}) !== JSON.stringify(records);
+        data.quoteLibrary = records;
+        return changed;
+      }
       let changed = false;
       const merged = new Map(data[group].map(item => [key(group, item), item]));
       const visible = new Set();
