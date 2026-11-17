@@ -472,6 +472,28 @@ function accountRow(t, today = iso()) {
     paid ? "Pago parcial" : "Por cobrar";
   return {total, paid, balance, due, overdue, payment};
 }
+/* Estado de cobro y comprobante para listas: pagado / parcial / no pagado / vencido, y con o sin factura. */
+function ticketMoneyStatus(t) {
+  const a = accountRow(t);
+  const pay = a.payment === "Sin importe aprobado" ? { key: "none", label: "Sin aprobar", tone: "" }
+    : !a.balance ? { key: "paid", label: "Pagado", tone: "green" }
+    : a.overdue ? { key: "due", label: a.paid ? "Parcial · vencido" : "Vencido", tone: "red" }
+    : a.paid ? { key: "partial", label: "Pago parcial", tone: "amber" }
+    : { key: "due", label: "No pagado", tone: "red" };
+  const type = t.doc?.type ? t.doc.type.charAt(0).toUpperCase() + t.doc.type.slice(1) : "Factura";
+  const invoice = t.doc?.number ? { key: "with", label: type + " " + t.doc.number, tone: "green" }
+    : { key: "without", label: "Sin factura", tone: t.status === "rechazado" ? "" : "amber" };
+  return { a, pay, invoice };
+}
+const moneyFilters = { "pago:no": "No pagado o parcial", "pago:si": "Pagado", "fact:sin": "Sin factura", "fact:con": "Con factura" };
+function matchMoneyFilter(t, filter) {
+  if (!moneyFilters[filter]) return false;
+  const { a, pay, invoice } = ticketMoneyStatus(t);
+  if (filter === "pago:no") return pay.key !== "none" && a.balance > 0;
+  if (filter === "pago:si") return pay.key === "paid";
+  if (filter === "fact:sin") return invoice.key === "without" && t.status !== "rechazado";
+  return invoice.key === "with";
+}
 function clientStatement(c, items) {
   const rows = items.map(t => ({t, ...accountRow(t)}));
   const sum = key => round(rows.reduce((amount, r) => amount + r[key], 0));
