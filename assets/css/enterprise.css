@@ -782,5 +782,10 @@ input[type="password"] {
 .quote-assistant select{max-width:100%;width:100%}
 .quote-bank-row{padding:12px;margin:10px 0;border:1px solid #dce2ea;border-radius:8px}
 .quote-bank-row input{min-width:0}
+.quote-profile{margin:0 0 12px;padding:8px 12px;background:#fff;border-left:4px solid #f4511e;border-radius:6px;font-size:.92rem;line-height:1.5}
+.quote-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.quote-chips .button{text-align:left;white-space:normal;height:auto;line-height:1.35;padding:8px 12px}
+.quote-cost-picker{display:block;margin:12px 0}
+.quote-cost-picker select{width:100%;max-width:100%}
 .quote-assistant .small,.quote-bank .small{line-height:1.5}
 @media(max-width:600px){.quote-bank .fields2{grid-template-columns:1fr}.quote-assistant .fields2{grid-template-columns:1fr}}

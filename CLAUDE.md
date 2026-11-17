@@ -55,7 +55,9 @@ Sistema de gestión interno de LEXSAN (Arequipa): clientes, recepción, evaluaci
 - Cotizar no reserva stock. El stock se descuenta al confirmar la entrega, y solo para líneas vinculadas al inventario.
 - Los totales ya aprobados no se recalculan; los borradores antiguos con valores forzados piden revisión.
 - La fecha de negocio es la de Lima, no UTC.
-- Las cotizaciones llevan numeración correlativa que nunca retrocede. El portal la lleva por cliente y año, pero los documentos históricos muestran dos series por emisor (persona natural y S.A.C.), compartidas entre clientes. Pendiente de confirmar con administración antes de tocar la numeración.
+- Las cotizaciones llevan numeración correlativa que nunca retrocede: una serie por emisor (razón social), compartida por todos sus clientes y sin reinicio anual; el formato es número-año. El emisor, el formato, la presentación con o sin IGV, el porcentaje de gastos generales y el plazo de pago salen del perfil del cliente en el catálogo privado (`quoteLibrary`: `issuers`, `profiles`, `costCatalog`). Sin catálogo solo existe el emisor S.A.C.
+- `assets/js/quote-templates.js` tiene las plantillas de servicio, notas e ítems frecuentes. Solo redacción técnica: nunca precios, clientes ni cuentas.
+- Publicar la numeración por emisor exige cargar antes `privado/catalogo-emisores.json` en Firestore; sin eso la serie arrancaría desde el último número que conozca el portal.
 - Antes de cambiar cualquier cosa de cotizaciones, leer `privado/COMO-COTIZA-LEXSAN.md` (carpeta local, fuera de Git): emisores, formatos por cliente, plantillas de pasos, notas y precios de referencia.
 - Roles: `gerencia`, `administracion`, `tecnico`. Los técnicos solo ven tickets asignados y solo editan evaluación y avance. Nada se borra desde el portal.
 - El portal no emite comprobantes electrónicos; solo registra los emitidos fuera.

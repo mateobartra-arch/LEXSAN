@@ -156,6 +156,19 @@ export async function createFirebaseAdapter(config) {
         return next;
       }));
     },
+    // Una serie por emisor, compartida por todos sus clientes y sin reinicio anual.
+    async reserveIssuerQuoteNumber(issuerId, minimum) {
+      if (!/^[a-z0-9]{2,20}$/.test(issuerId) || !Number.isInteger(minimum) || minimum < 1 || minimum > 999999)
+        throw Error("Revisa el emisor y la numeración.");
+      const ref = doc(firestore, prefix + "/quoteSequences/emisor-" + issuerId);
+      return reserveWithRetry(() => runTransaction(firestore, async tx => {
+        const snapshot = await tx.get(ref);
+        const next = Math.max(minimum, (snapshot.data()?.last || 0) + 1);
+        if (next > 999999) throw Error("La numeración excede el límite.");
+        tx.set(ref, { last: next });
+        return next;
+      }));
+    },
     async saveBankAccounts(bankAccounts) {
       const ref = doc(firestore, prefix + "/settings/quoteLibrary");
       await runTransaction(firestore, async tx => {

@@ -302,14 +302,17 @@ function buildLexsanPDF(t, c, kind) {
       : kind === "eval"
         ? "EVA-" + String(t.id).padStart(3, "0")
         : "OT-" + String(t.id).padStart(3, "0");
+  // El emisor depende del cliente en las cotizaciones; el resto de documentos usa la empresa.
+  const issuer = kind === "quote" && typeof quoteIssuerPrint === "function"
+    ? quoteIssuerPrint(t) : { name: "LEXSAN RADIADORES S.A.C.", ruc: "20614867443" };
   function header(continuePage = false) {
     pdf.page();
     pageNumber++;
     pdf.rect(0, 0, PDF_W, 8, PDF_ORANGE);
     pdf.placeImage(brandImg, 45, 28, 54, 61);
-    pdf.text("LEXSAN RADIADORES S.A.C.", 112, 49, 13, true);
+    pdf.text(issuer.name, 112, 49, Math.min(13, 215 / pdf.measure(issuer.name, 1, true)), true);
     pdf.text(
-      "RUC 20614867443  |  Arequipa, Perú",
+      (issuer.ruc ? "RUC " + issuer.ruc + "  |  " : "") + "Arequipa, Perú",
       112,
       66,
       8.7,
@@ -413,7 +416,7 @@ function buildLexsanPDF(t, c, kind) {
   function footer() {
     pdf.line(44, 791, 551, 791, [0.87, 0.87, 0.87]);
     pdf.text(
-      "LEXSAN RADIADORES S.A.C.  ·  Documento comercial / técnico",
+      issuer.name + "  ·  Documento comercial / técnico",
       44,
       806,
       7.3,
