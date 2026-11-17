@@ -49,8 +49,7 @@ function searchQuoteRuc(value) {
     const previousId = t.clientId;
     if (previousId !== exact.id) {
       delete t.quote.nextNumber;
-      t.quote.format = db.quoteLibrary?.profiles?.[exact.id]?.format || "standard";
-      t.quote.presentation = db.quoteLibrary?.profiles?.[exact.id]?.presentation || "total";
+      applyClientProfile(t, db.quoteLibrary?.profiles?.[exact.id] || {});
     }
     applyCustomerPayment(t, exact.id);
     t.clientId = exact.id;
