@@ -59,6 +59,14 @@ const {chromium}=require("playwright"),assert=require("node:assert/strict");
  const [total]=await Promise.all([page.waitForEvent("download"),page.getByRole("button",{name:"Descargar cotización PDF"}).click()]);
  await total.saveAs("test-results/quote-assistant-total.pdf");
  assert.match(total.suggestedFilename(),new RegExp("^801-"+yy));
+ // Número escrito a mano en la cabecera: mayor → la serie sigue desde él; menor → se usa sin mover la serie.
+ const manual=await page.evaluate(async()=>{
+   const run=async n=>{newQuote();selectQuoteCompany("87654321");const f=document.getElementById("quote-next-number");f.value=String(n);setNextQuoteNumber(f);const t=ticket(modal);await ensureQuoteNumber(t);return t.quote.number.split("-")[0];};
+   const high=await run(850);newQuote();selectQuoteCompany("87654321");const after=document.getElementById("quote-next-number").value;
+   const low=await run(700);newQuote();selectQuoteCompany("87654321");const afterLow=document.getElementById("quote-next-number").value;
+   return {high,after,low,afterLow};
+ });
+ assert.deepEqual(manual,{high:"850",after:"851",low:"700",afterLow:"851"});
  // Cuentas: todas son opciones; se imprimen solo las marcadas, en el orden del catálogo.
  const banks=await page.evaluate(()=>{
    db.quoteLibrary.bankAccounts=[{holder:"TITULAR A",bank:"BANCO A",currency:"Soles",account:"111",cci:"",issuer:"sac"},{holder:"TITULAR B",bank:"BANCO B",currency:"Soles",account:"222",cci:""},{holder:"TITULAR C",bank:"BILLETERA",currency:"Soles",account:"333",cci:"",preselect:true}];

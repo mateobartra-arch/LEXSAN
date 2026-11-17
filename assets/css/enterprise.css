@@ -794,3 +794,10 @@ input[type="password"] {
 .quote-cost-picker select{width:100%;max-width:100%}
 .quote-assistant .small,.quote-bank .small{line-height:1.5}
 @media(max-width:600px){.quote-bank .fields2{grid-template-columns:1fr}.quote-assistant .fields2{grid-template-columns:1fr}}
+
+.quote-number-field{display:grid;gap:4px;justify-items:end;text-align:right}
+.quote-number-field label{font-size:.78rem;font-weight:700;color:#5b6472;text-transform:uppercase;letter-spacing:.04em}
+.quote-number-field span{display:flex;align-items:center;gap:4px}
+.quote-number-field input{width:8.5em;font-weight:700;color:#d84315;text-align:right;font-size:1.05rem}
+.quote-number-field b{color:#d84315;font-size:1.05rem}
+.quote-number-field small{max-width:16em;color:#b45309;line-height:1.35}

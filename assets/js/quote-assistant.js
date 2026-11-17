@@ -36,9 +36,13 @@ ensureQuoteNumber = async function(t) {
   if (t.quote.number) return t.quote.number;
   if (!db.clients.some(c => c.id === t.clientId)) throw Error("Selecciona el cliente.");
   if (!quoteReservations.has(t)) {
-    const clientId = t.clientId, issuer = quoteIssuer(t), year = Number(iso().slice(0, 4)), minimum = quoteSeriesMinimum(t);
+    const clientId = t.clientId, issuer = quoteIssuer(t), year = Number(iso().slice(0, 4));
+    // Número escrito a mano: si es mayor que el automático, la serie continúa desde él;
+    // si es menor (cotización atrasada o corrección), se usa tal cual sin mover la serie.
+    const automatic = quoteSeriesMinimum(t, false), manual = Number(t.quote.nextNumber || 0);
+    const minimum = Math.max(automatic, manual), belowSeries = manual > 0 && manual < automatic;
     quoteReservations.set(t, (async () => {
-      const number = LexStore.mode === "firebase"
+      const number = belowSeries ? manual : LexStore.mode === "firebase"
         ? await LexStore.adapter.reserveIssuerQuoteNumber(issuer.id, minimum) : minimum;
       if (clientId !== t.clientId || quoteIssuer(t).id !== issuer.id) throw Error("Cambió el cliente o el emisor; vuelve a descargar.");
       t.quote.number = String(number) + "-" + String(year).slice(-2);
@@ -121,7 +125,8 @@ quotePaperHeader = function(t, editable) {
   const { own, builtin } = quoteTemplateChoices();
   const option = x => `<option value="${esc(x.id)}">${esc(x.label)}</option>`;
   const issuers = quoteIssuers(), issuer = quoteIssuer(t), printed = quoteIssuerPrint(t);
-  const header = originalQuotePaperHeader(t, editable).replace("<b>LEXSAN RADIADORES S.A.C.</b>", `<b>${esc(printed.name)}</b>`);
+  const header = originalQuotePaperHeader(t, editable).replace("<b>LEXSAN RADIADORES S.A.C.</b>", `<b>${esc(printed.name)}</b>`)
+    .replace(/<strong>[^<]*<\/strong><\/header>/, quoteNumberField(t, editable) + "</header>");
   return header + (editable ? `<div class="quote-assistant">
     ${quoteProfileSummary(t)}
     <label>¿Qué servicio vas a cotizar?<select id="service-template"><option value="">Seleccionar una plantilla…</option>${own.length ? `<optgroup label="Catálogo de la empresa">${own.map(option).join("")}</optgroup><optgroup label="Plantillas LEXSAN">${builtin.map(option).join("")}</optgroup>` : builtin.map(option).join("")}</select></label>
@@ -137,7 +142,7 @@ quotePaperHeader = function(t, editable) {
     ${issuers.length > 1 ? `<label>Emisor<select id="quote-issuer" ${t.quote.number ? "disabled" : ""} onchange="changeQuoteIssuer(this.value)">${issuers.map(x => `<option value="${esc(x.id)}" ${x.id === issuer.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>` : ""}
     <div class="fields2"><label>Formato<select onchange="changeQuoteOption('format',this.value)"><option value="standard" ${t.quote.format !== "detailed" ? "selected" : ""}>Cotización sencilla</option><option value="detailed" ${t.quote.format === "detailed" ? "selected" : ""}>Presupuesto detallado por costos</option></select></label>
     <label>Presentación del PDF<select onchange="changeQuoteOption('presentation',this.value)"><option value="total" ${t.quote.presentation !== "base" ? "selected" : ""}>Base + IGV + total</option><option value="base" ${t.quote.presentation === "base" ? "selected" : ""}>Base sin IGV · indicar que se agrega</option></select></label></div>
-    ${t.quote.number ? `<p>Número asignado: <b>${esc(t.quote.number)}</b>. Se conserva al volver a descargar.</p>` : `<label>Siguiente número de la serie<input id="quote-next-number" type="number" min="${quoteSeriesMinimum(t, false)}" max="999999" step="1" value="${quoteSeriesMinimum(t)}" onchange="setNextQuoteNumber(this)"></label><p class="small">Se reserva al descargar: número-año. La serie es una sola por emisor${issuers.length > 1 ? " (" + esc(issuer.name) + ")" : ""} y la comparten todos sus clientes; no se reinicia cada año. Si se emitieron cotizaciones fuera del portal, corrige aquí el número.</p>`}
+    <p class="small">${t.quote.number ? `Número asignado: <b>${esc(t.quote.number)}</b>. Se conserva al volver a descargar.` : `El número se escribe arriba, en «Cotización N.º». Viene propuesto el siguiente de la serie (${quoteSeriesMinimum(t, false)}); la serie es una sola por emisor${issuers.length > 1 ? " (" + esc(issuer.name) + ")" : ""}, la comparten todos sus clientes y no se reinicia cada año. Se reserva al descargar el PDF.`}</p>
     </details></div>` : "");
 };
 function changeQuoteIssuer(id) {
@@ -168,10 +173,20 @@ function addFrequentNote(index) {
   t.quote.annex.notes = [...current, note].join("\n");
   save(); renderTicketModal(); toast("Nota añadida al anexo.");
 }
+function quoteNumberField(t, editable) {
+  if (t.quote.number) return `<strong>N.º ${esc(t.quote.number)}</strong>`;
+  if (!editable) return `<strong>${esc(cid(t.id))}</strong>`;
+  const automatic = quoteSeriesMinimum(t, false), value = Number(t.quote.nextNumber || 0) || automatic;
+  return `<div class="quote-number-field"><label for="quote-next-number">Cotización N.º</label><span><input id="quote-next-number" type="number" inputmode="numeric" min="1" max="999999" step="1" value="${value}" onchange="setNextQuoteNumber(this)"><b>-${esc(iso().slice(2, 4))}</b></span><small id="quote-number-note" role="status">${value < automatic ? "Menor que el siguiente de la serie (" + automatic + "): revisa que no esté repetido." : ""}</small></div>`;
+}
 function setNextQuoteNumber(field) {
-  if (!field.checkValidity()) return;
+  if (!field.checkValidity() || !Number.isInteger(Number(field.value))) return showQuoteError("Escribe un número de cotización entero entre 1 y 999999.");
   const t = ticket(modal); if (!t || t.quote.number) return;
-  t.quote.nextNumber = Number(field.value); save();
+  const automatic = quoteSeriesMinimum(t, false), value = Number(field.value);
+  if (value === automatic) delete t.quote.nextNumber; else t.quote.nextNumber = value;
+  const note = document.getElementById("quote-number-note");
+  if (note) note.textContent = value < automatic ? "Menor que el siguiente de la serie (" + automatic + "): revisa que no esté repetido." : "";
+  save();
 }
 function changeQuoteOption(key, value) {
   const t = ticket(modal); if (!t || t.status !== "evaluacion") return;
