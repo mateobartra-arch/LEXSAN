@@ -60,6 +60,7 @@ function applyClientProfile(t, profile) {
   t.quote.format = profile.format || "standard";
   t.quote.presentation = profile.presentation || "total";
   if (profile.issuer) t.quote.issuerId = profile.issuer; else delete t.quote.issuerId;
+  if (profile.letter) t.quote.letter = true; else delete t.quote.letter;
   if (Number.isFinite(profile.overheadPercent)) t.quote.overheadPercent = profile.overheadPercent;
   else if (t.quote.format !== "detailed") delete t.quote.overheadPercent;
   // El cliente aún no está asignado al expediente: el emisor sale del perfil recibido.
@@ -129,9 +130,8 @@ quotePaperHeader = function(t, editable) {
     .replace(/<strong>[^<]*<\/strong><\/header>/, quoteNumberField(t, editable) + "</header>");
   return header + (editable ? `<div class="quote-assistant">
     ${quoteProfileSummary(t)}
-    <label>¿Qué servicio vas a cotizar?<select id="service-template"><option value="">Seleccionar una plantilla…</option>${own.length ? `<optgroup label="Catálogo de la empresa">${own.map(option).join("")}</optgroup><optgroup label="Plantillas LEXSAN">${builtin.map(option).join("")}</optgroup>` : builtin.map(option).join("")}</select></label>
-    <button class="button outline" onclick="applyServiceTemplate()">Usar plantilla</button>
-    <p class="small">La plantilla completa los ítems, el alcance y la prueba de presión. Solo falta el precio. Puedes usar varias en la misma cotización.</p>
+    <label>Descripción del servicio (segunda página)<select id="service-template" onchange="applyServiceTemplate()"><option value="">Elegir el servicio para llenar la descripción…</option>${own.length ? `<optgroup label="Catálogo de la empresa">${own.map(option).join("")}</optgroup><optgroup label="Plantillas LEXSAN">${builtin.map(option).join("")}</optgroup>` : builtin.map(option).join("")}</select></label>
+    <p class="small">Al elegir el servicio se llena la descripción de la segunda página (pasos, prueba de presión y notas). Luego puedes editarla. Si eliges otro, se agrega debajo.</p>
     <details class="quote-extra"><summary>Ítems y notas frecuentes</summary>
     <p class="small">Un toque añade el ítem a la tabla.</p>
     <div class="quote-chips">${LexQuoteTemplates.items.map((x, i) => `<button class="button ghost sm" onclick="addFrequentItem(${i})">＋ ${esc(x)}</button>`).join("")}</div>
@@ -211,18 +211,10 @@ function applyServiceTemplate() {
   if (notes.length) t.quote.annex.notes = [...existing, ...notes].join("\n");
   t.quote.templateIds = [...(t.quote.templateIds || []), template.id];
   if (!t.equipment.trim()) t.equipment = title;
-  // En presupuestos por costos las líneas son insumos, no servicios: no se añaden.
-  const descriptions = t.quote.format === "detailed" ? [] : template.lines?.length ? template.lines : [title];
-  for (const desc of descriptions) {
-    if (t.quote.lines.some(l => l.desc.trim() === desc)) continue;
-    const empty = t.quote.lines.find(l => !l.desc.trim() && !Number(l.price));
-    if (empty) empty.desc = desc;
-    else t.quote.lines.push({desc, qty: 1, price: 0});
-  }
   if (template.warranty && t.quote.conditions) t.quote.conditions.warranty = template.warranty;
   if (template.sale && !(t.quote.terms || "").includes("NO SE ACEPTAN CAMBIOS NI DEVOLUCIONES."))
     t.quote.terms = [t.quote.terms, "NO SE ACEPTAN CAMBIOS NI DEVOLUCIONES."].filter(Boolean).join("\n");
-  save(); renderTicketModal(); toast("Alcance preparado. Revisa detalles y precio.");
+  save(); renderTicketModal(); toast("Descripción del servicio lista en la segunda página.");
 }
 const selectQuoteCompanyOriginal = selectQuoteCompany;
 selectQuoteCompany = function(id) {
@@ -234,8 +226,28 @@ selectQuoteCompany = function(id) {
     delete t.quote.nextNumber;
     applyClientProfile(t, db.quoteLibrary?.profiles?.[id] || {});
   }
+  const changed = t && t.clientId !== id;
   selectQuoteCompanyOriginal(id);
+  if (changed && t.clientId === id) applyClientContact(t, db.quoteLibrary?.profiles?.[id] || {});
 };
+/* Datos de trato del cliente (contacto habitual, prefijo del código de unidad). */
+function applyClientContact(t, profile) {
+  let touched = false;
+  if (profile.contact && !t.quote.customer?.contact) { (t.quote.customer ||= {}).contact = profile.contact; touched = true; }
+  if (profile.unitPrefix && !t.serial) { t.serial = profile.unitPrefix; touched = true; }
+  if (touched) { save(); renderTicketModal(); }
+}
+/* Botones de Inicio para clientes con formato propio: salen del catálogo privado. */
+function quoteShortcuts() {
+  return Object.entries(db.quoteLibrary?.profiles || {})
+    .filter(([id, p]) => p.button && db.clients.some(c => c.id === id))
+    .map(([id, p]) => ({ id, label: String(p.button) }));
+}
+function newClientQuote(id) {
+  if (!db.clients.some(c => c.id === id)) return toast("Ese cliente no está registrado en el portal.");
+  newQuote();
+  selectQuoteCompany(id);
+}
 const renderQuoteEditorOriginal = renderQuoteEditor;
 renderQuoteEditor = function(t) {
   let output = renderQuoteEditorOriginal(t);
@@ -332,3 +344,30 @@ quoteFieldError=function() {
     return "Revisa el siguiente número de cotización.";
   return "";
 };
+
+/* Fotos de la cotización: varias, también pegadas con Ctrl+V. No se guardan en la base:
+   viven mientras la cotización está abierta en esta pestaña. */
+const quotePhotoLimit = 8;
+function addQuotePhoto(t, src) {
+  const list = quotePhotos.get(t) || [];
+  if (list.length >= quotePhotoLimit) { toast("Máximo " + quotePhotoLimit + " fotos por cotización."); return false; }
+  quotePhotos.set(t, [...list, src]);
+  return true;
+}
+function removeQuotePhoto(index) {
+  const t = ticket(modal); if (!t) return;
+  const list = [...(quotePhotos.get(t) || [])]; list.splice(index, 1);
+  quotePhotos.set(t, list); renderTicketModal();
+}
+document.addEventListener("paste", async event => {
+  const t = ticket(modal);
+  if (!t || t.status !== "evaluacion" || !document.querySelector(".quote-workspace")) return;
+  const files = [...(event.clipboardData?.items || [])].filter(i => i.kind === "file" && i.type.startsWith("image/")).map(i => i.getAsFile()).filter(Boolean);
+  if (!files.length) return;
+  event.preventDefault();
+  let added = 0;
+  for (const file of files) {
+    try { if (addQuotePhoto(t, await compressImage(file))) added++; } catch { toast("No se pudo leer la imagen pegada."); }
+  }
+  if (added && ticket(modal) === t) { renderTicketModal(); toast(added === 1 ? "Foto pegada." : added + " fotos pegadas."); }
+});

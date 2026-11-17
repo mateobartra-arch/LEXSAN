@@ -11,7 +11,7 @@ const {chromium}=require("playwright"),assert=require("node:assert/strict");
    db.clients.unshift(a,b,c);
    db.quoteLibrary={templates:[{id:"test",label:"Mantenimiento de radiador",body:"Limpieza interior y exterior.\nPrueba según evaluación.",notes:"El alcance depende de la evaluación.",sources:[]}],
     issuers:[{id:"sac",name:"EMISOR UNO DE PRUEBA",ruc:"20000000001",lastNumber:800},{id:"pn",name:"EMISOR DOS DE PRUEBA",ruc:"10000000001",lastNumber:5000}],
-    profiles:{[a.id]:{format:"detailed",presentation:"base",overheadPercent:16,series:{last:7,year:2025}},[b.id]:{issuer:"pn",presentation:"base",paymentDays:30}},
+    profiles:{[a.id]:{format:"detailed",presentation:"base",overheadPercent:16,series:{last:7,year:2025}},[b.id]:{issuer:"pn",presentation:"base",paymentDays:30,button:"Cotización Cliente B",contact:"Ing. Contacto Ficticio",unitPrefix:"R-",letter:true}},
     costCatalog:[{group:"Mano de obra",desc:"Técnico de prueba",unit:"hora",price:10}],
     bankAccounts:[{holder:"TITULAR DE PRUEBA SIN VALIDEZ",bank:"BANCO TEST",currency:"Soles",account:"00000000000000",cci:"000 00000000000000000"}]};
    newQuote();selectQuoteCompany(a.id);
@@ -20,7 +20,6 @@ const {chromium}=require("playwright"),assert=require("node:assert/strict");
  assert.equal(await page.locator("#quote-next-number").inputValue(),"801");
  assert.equal(await page.evaluate(()=>ticket(modal).quote.overheadPercent),16);
  await page.selectOption("#service-template","test");
- await page.getByRole("button",{name:"Usar plantilla",exact:true}).click();
  // Presupuesto por costos: la plantilla no añade líneas de servicio; los conceptos salen del catálogo.
  assert.equal(await page.evaluate(()=>ticket(modal).quote.lines.filter(l=>l.desc).length),0);
  await page.selectOption(".quote-cost-picker select",{index:1});
@@ -38,14 +37,13 @@ const {chromium}=require("playwright"),assert=require("node:assert/strict");
  assert.equal(await page.locator("#quote-next-number").inputValue(),"802");
  // Plantilla incorporada: dos ítems, alcance con pruebas de presión y nota general.
  await page.selectOption("#service-template","lx-radiador-intercooler");
- await page.getByRole("button",{name:"Usar plantilla",exact:true}).click();
  const built=await page.evaluate(()=>{const q=ticket(modal).quote;return {lines:q.lines.map(l=>l.desc),body:q.annex.body,notes:q.annex.notes};});
- assert.equal(built.lines.length,2);
+ assert.deepEqual(built.lines,[""]);
  assert.match(built.body,/15 psi[\s\S]*25 psi/);
  assert.match(built.notes,/costos calculados son variables/);
  await page.evaluate(()=>{addFrequentNote(0);addFrequentNote(0);addFrequentItem(1);});
  assert.equal(await page.evaluate(()=>ticket(modal).quote.annex.notes.split("\n").length),2);
- assert.equal(await page.evaluate(()=>ticket(modal).quote.lines.length),3);
+ assert.equal(await page.evaluate(()=>ticket(modal).quote.lines.length),1);
  // Cliente del segundo emisor: otra serie, sin IGV, crédito a 30 días y su razón social en el PDF.
  await page.evaluate(()=>{newQuote();selectQuoteCompany("20999999991");});
  assert.equal(await page.locator("#quote-next-number").inputValue(),"5001");
@@ -67,6 +65,16 @@ const {chromium}=require("playwright"),assert=require("node:assert/strict");
    return {high,after,low,afterLow};
  });
  assert.deepEqual(manual,{high:"850",after:"851",low:"700",afterLow:"851"});
+ // Botón de Inicio del cliente con formato propio.
+ await page.evaluate(()=>{closeModal();go("inicio");});
+ await page.getByRole("button",{name:"Cotización Cliente B"}).click();
+ const shortcut=await page.evaluate(()=>{const t=ticket(modal);return [t.clientId,t.quote.customer.contact,t.serial,t.quote.letter,t.quote.presentation];});
+ assert.deepEqual(shortcut,["20999999991","Ing. Contacto Ficticio","R-",true,"base"]);
+ // Fotos: dos imágenes (como si se pegaran) salen en la segunda página del PDF en formato carta.
+ await page.evaluate(()=>{const t=ticket(modal);const cv=document.createElement("canvas");cv.width=60;cv.height=40;cv.getContext("2d").fillRect(0,0,30,20);const src=cv.toDataURL("image/jpeg",.8);addQuotePhoto(t,src);addQuotePhoto(t,src);t.serial="R-123";t.quote.lines=[{desc:"Técnico de prueba",qty:2,price:10,costGroup:"Mano de obra",unit:"hora"}];t.quote.annex={title:"Mantenimiento de prueba",body:"Paso uno."};t.quote.format="detailed";t.quote.overheadPercent=16;save();renderTicketModal();});
+ assert.equal(await page.locator(".quote-photo-row img").count(),2);
+ const [letterPdf]=await Promise.all([page.waitForEvent("download"),page.getByRole("button",{name:"Descargar cotización PDF"}).click()]);
+ await letterPdf.saveAs("test-results/quote-assistant-carta.pdf");
  // Cuentas: todas son opciones; se imprimen solo las marcadas, en el orden del catálogo.
  const banks=await page.evaluate(()=>{
    db.quoteLibrary.bankAccounts=[{holder:"TITULAR A",bank:"BANCO A",currency:"Soles",account:"111",cci:"",issuer:"sac"},{holder:"TITULAR B",bank:"BANCO B",currency:"Soles",account:"222",cci:""},{holder:"TITULAR C",bank:"BILLETERA",currency:"Soles",account:"333",cci:"",preselect:true}];

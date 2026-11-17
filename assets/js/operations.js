@@ -108,6 +108,26 @@ renderEvaluationView = function (t, money) {
 function photoInputs(target) {
   return `<div class="fields2"><div><label>Elegir foto de galería</label><input type="file" accept="image/*" onchange="attachImage(this,'${target}')"></div><div><label>Tomar fotografía</label><input type="file" accept="image/*" capture="environment" onchange="attachImage(this,'${target}')"></div></div>`;
 }
+async function compressImage(f) {
+  const data = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(f);
+  });
+  const img = await new Promise((resolve, reject) => {
+    const x = new Image();
+    x.onload = () => resolve(x);
+    x.onerror = reject;
+    x.src = data;
+  });
+  const canvas = document.createElement("canvas"),
+    scale = Math.min(1, 1200 / Math.max(img.width, img.height));
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.72);
+}
 async function attachImage(input, target) {
   const t = ticket(modal),
     f = input.files?.[0];
@@ -116,28 +136,10 @@ async function attachImage(input, target) {
   if (!f.type.startsWith("image/") || f.size > 20 * 1024 * 1024)
     return toast("Elige una imagen de hasta 20 MB.");
   try {
-    const data = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = reject;
-      r.readAsDataURL(f);
-    });
-    const img = await new Promise((resolve, reject) => {
-      const x = new Image();
-      x.onload = () => resolve(x);
-      x.onerror = reject;
-      x.src = data;
-    });
-    const canvas = document.createElement("canvas"),
-      scale = Math.min(1, 1200 / Math.max(img.width, img.height));
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    const src = canvas.toDataURL("image/jpeg", 0.72);
+    const src = await compressImage(f);
     if (target === "quotation") {
       if (modal !== t.id || ticket(modal) !== t || t.status !== "evaluacion") return;
-      quotePhotos.set(t, src);
-      renderTicketModal();
+      if (addQuotePhoto(t, src)) renderTicketModal();
       return;
     }
     if (target === "evaluation") t.eval.photos.push(src);

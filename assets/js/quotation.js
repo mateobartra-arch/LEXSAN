@@ -430,12 +430,11 @@ function setQuoteField(group, key, value) {
 }
 const quotePhotos = new WeakMap();
 function quotePhotoEditor(t, editable) {
-  const image = quotePhotos.get(t);
-  if (!editable && !image) return "";
-  return `<details class="quote-extra" ${image ? "open" : ""}><summary>Foto en la descripción</summary>
-    ${image ? `<div class="photo-row"><img src="${image}" alt="Foto para la cotización"></div>` : ""}
-    ${editable ? `${photoInputs("quotation")}<p class="small">La foto se incluye en el PDF. Vuelve a adjuntarla si recargas el portal.</p>
-      ${image ? '<button class="button ghost sm" onclick="quotePhotos.delete(ticket(modal));renderTicketModal()">Quitar foto</button>' : ""}` : ""}</details>`;
+  const images = quotePhotos.get(t) || [];
+  if (!editable && !images.length) return "";
+  return `<details class="quote-extra" ${images.length ? "open" : ""}><summary>Fotos de la cotización${images.length ? " (" + images.length + ")" : ""}</summary>
+    ${images.length ? `<div class="photo-row quote-photo-row">${images.map((src, i) => `<figure><img src="${src}" alt="Foto ${i + 1} de la cotización">${editable ? `<button class="button ghost sm" onclick="removeQuotePhoto(${i})">Quitar</button>` : ""}</figure>`).join("")}</div>` : ""}
+    ${editable ? `<p class="small"><b>Copia una foto y pégala aquí con Ctrl+V</b>, o súbela con los botones. Salen en la segunda página, debajo de la descripción del servicio. Vuelve a adjuntarlas si recargas el portal.</p>${photoInputs("quotation")}` : ""}</details>`;
 }
 const quoteMaintenanceScope = [
   "Desmontaje de accesorios y limpieza interior y exterior.",
