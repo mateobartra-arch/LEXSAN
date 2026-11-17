@@ -55,7 +55,8 @@ Sistema de gestión interno de LEXSAN (Arequipa): clientes, recepción, evaluaci
 - Cotizar no reserva stock. El stock se descuenta al confirmar la entrega, y solo para líneas vinculadas al inventario.
 - Los totales ya aprobados no se recalculan; los borradores antiguos con valores forzados piden revisión.
 - La fecha de negocio es la de Lima, no UTC.
-- Las cotizaciones llevan numeración correlativa, con series por cliente; el correlativo nunca retrocede.
+- Las cotizaciones llevan numeración correlativa que nunca retrocede. El portal la lleva por cliente y año, pero los documentos históricos muestran dos series por emisor (persona natural y S.A.C.), compartidas entre clientes. Pendiente de confirmar con administración antes de tocar la numeración.
+- Antes de cambiar cualquier cosa de cotizaciones, leer `privado/COMO-COTIZA-LEXSAN.md` (carpeta local, fuera de Git): emisores, formatos por cliente, plantillas de pasos, notas y precios de referencia.
 - Roles: `gerencia`, `administracion`, `tecnico`. Los técnicos solo ven tickets asignados y solo editan evaluación y avance. Nada se borra desde el portal.
 - El portal no emite comprobantes electrónicos; solo registra los emitidos fuera.
 
@@ -64,7 +65,7 @@ Sistema de gestión interno de LEXSAN (Arequipa): clientes, recepción, evaluaci
 - Respetar la arquitectura y el estilo existentes. No reescribir ni cambiar de framework sin preguntar.
 - Commits pequeños y descriptivos en español. No hacer `push`, desplegar ni tocar `main` sin visto bueno.
 - No borrar archivos ni datos sin confirmación. Firestore tiene datos reales de clientes.
-- Nunca subir `config/firebase.local.json`, claves de cuenta de servicio, respaldos ni cotizaciones reales. La carpeta `Downloads\LEXSAN_ANALISIS_PRIVADO` (cotizaciones históricas y scripts de importación) queda fuera del repositorio.
+- Nunca subir `config/firebase.local.json`, claves de cuenta de servicio, respaldos ni cotizaciones reales. La carpeta `Downloads\LEXSAN_ANALISIS_PRIVADO` (cotizaciones históricas y scripts de importación) queda fuera del repositorio, igual que `privado/` (excluida en `.gitignore`; nunca usar `git add -f` sobre ella).
 - Probar en modo local (`npm run dev`) antes de proponer un despliegue.
 
 ## Deuda conocida
