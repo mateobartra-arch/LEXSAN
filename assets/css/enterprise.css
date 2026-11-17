@@ -786,6 +786,11 @@ input[type="password"] {
 .quote-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
 .quote-chips .button{text-align:left;white-space:normal;height:auto;line-height:1.35;padding:8px 12px}
 .quote-cost-picker{display:block;margin:12px 0}
+.quote-bank-options{display:grid;gap:8px;margin:8px 0 12px}
+.quote-bank-option{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #dce2ea;border-radius:8px;background:#fff;line-height:1.4;cursor:pointer}
+.quote-extra .quote-bank-option{display:flex;flex-direction:row}
+.quote-extra .quote-bank-option input{display:inline-block;width:18px;height:18px;margin:2px 0 0;flex:none}
+.quote-bank-option small{color:#5b6472;overflow-wrap:anywhere}
 .quote-cost-picker select{width:100%;max-width:100%}
 .quote-assistant .small,.quote-bank .small{line-height:1.5}
 @media(max-width:600px){.quote-bank .fields2{grid-template-columns:1fr}.quote-assistant .fields2{grid-template-columns:1fr}}

@@ -84,7 +84,7 @@ service cloud.firestore {
    allow read: if office(org);
    // Catalogue and historical profiles are provisioned by the trusted import.
    // Office users may change only the bank accounts for future quotations.
-   allow update: if office(org) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bankAccounts']) && request.resource.data.bankAccounts is list && request.resource.data.bankAccounts.size() <= 5;
+   allow update: if office(org) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bankAccounts']) && request.resource.data.bankAccounts is list && request.resource.data.bankAccounts.size() <= 8;
   }
  }
 }

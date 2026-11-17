@@ -59,6 +59,17 @@ const {chromium}=require("playwright"),assert=require("node:assert/strict");
  const [total]=await Promise.all([page.waitForEvent("download"),page.getByRole("button",{name:"Descargar cotización PDF"}).click()]);
  await total.saveAs("test-results/quote-assistant-total.pdf");
  assert.match(total.suggestedFilename(),new RegExp("^801-"+yy));
+ // Cuentas: todas son opciones; se imprimen solo las marcadas, en el orden del catálogo.
+ const banks=await page.evaluate(()=>{
+   db.quoteLibrary.bankAccounts=[{holder:"TITULAR A",bank:"BANCO A",currency:"Soles",account:"111",cci:"",issuer:"sac"},{holder:"TITULAR B",bank:"BANCO B",currency:"Soles",account:"222",cci:""},{holder:"TITULAR C",bank:"BILLETERA",currency:"Soles",account:"333",cci:"",preselect:true}];
+   newQuote();selectQuoteCompany("87654321");
+   const marked=()=>ticket(modal).quote.bankAccounts.map(a=>a.account).join(",");
+   const start=marked(),boxes=document.querySelectorAll(".quote-bank-option input").length;
+   toggleQuoteBank(0,true);const two=marked();
+   toggleQuoteBank(2,false);const one=marked();
+   return {start,boxes,two,one};
+ });
+ assert.deepEqual(banks,{start:"333",boxes:3,two:"111,333",one:"111"});
  await page.screenshot({path:"test-results/quote-assistant-mobile.png",fullPage:true});
  assert.deepEqual(errors,[]);
  await browser.close();console.log("PASS: issuer series shared across clients, client profiles, built-in templates, notes, cost catalogue, PDFs, mobile.");

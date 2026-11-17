@@ -58,16 +58,44 @@ function applyClientProfile(t, profile) {
   if (profile.issuer) t.quote.issuerId = profile.issuer; else delete t.quote.issuerId;
   if (Number.isFinite(profile.overheadPercent)) t.quote.overheadPercent = profile.overheadPercent;
   else if (t.quote.format !== "detailed") delete t.quote.overheadPercent;
-  // Las cuentas del emisor, si el catálogo las define, reemplazan a las generales.
   // El cliente aún no está asignado al expediente: el emisor sale del perfil recibido.
   const issuers = quoteIssuers(), issuer = issuers.find(x => x.id === profile.issuer) || issuers[0];
-  const accounts = issuer.bankAccounts || db.quoteLibrary?.bankAccounts;
-  if (accounts?.length && !t.quote.seller?.bank) t.quote.bankAccounts = structuredClone(accounts);
+  const accounts = defaultBankAccounts(issuer.id);
+  if (accounts.length && !t.quote.seller?.bank) t.quote.bankAccounts = accounts;
+}
+/* Cuentas bancarias: el catálogo guarda todas las opciones; cada cotización
+   imprime solo las marcadas. Vienen marcadas las que tienen `preselect`; si
+   ninguna lo tiene, las del emisor; si tampoco, todas. */
+const bankLimit = 8;
+function libraryBankAccounts() {
+  return (db.quoteLibrary?.bankAccounts || []).filter(a => a?.account && a?.bank);
+}
+function bankKey(a) {
+  return String(a.bank || "").trim().toUpperCase() + "|" + String(a.account || "").replace(/\D/g, "");
+}
+function bankSnapshot(a) {
+  return { holder: a.holder || "", bank: a.bank || "", currency: a.currency || "Soles", account: a.account || "", cci: a.cci || "" };
+}
+function defaultBankAccounts(issuerId) {
+  const all = libraryBankAccounts();
+  const preset = all.filter(a => a.preselect);
+  const own = all.filter(a => a.issuer === issuerId);
+  return (preset.length ? preset : own.length ? own : all).map(bankSnapshot);
+}
+function toggleQuoteBank(index, on) {
+  const t = ticket(modal); if (t?.status !== "evaluacion") return;
+  const library = libraryBankAccounts(), chosen = library[index]; if (!chosen) return;
+  const current = t.quote.bankAccounts || [], keys = new Set(current.map(bankKey));
+  if (on) keys.add(bankKey(chosen)); else keys.delete(bankKey(chosen));
+  if (keys.size > bankLimit) return toast("Máximo " + bankLimit + " cuentas por cotización.");
+  const manual = current.filter(a => !library.some(b => bankKey(b) === bankKey(a)) && keys.has(bankKey(a)));
+  t.quote.bankAccounts = [...library.filter(b => keys.has(bankKey(b))).map(bankSnapshot), ...manual];
+  save(); renderTicketModal();
 }
 function prepareQuoteDefaults(t) {
   if (t.status !== "evaluacion") return;
   if (t.quote.bankAccounts === undefined && !t.quote.seller?.bank)
-    t.quote.bankAccounts = structuredClone(quoteIssuer(t).bankAccounts || db.quoteLibrary?.bankAccounts || []);
+    t.quote.bankAccounts = defaultBankAccounts(quoteIssuer(t).id);
   const profile = quoteClientProfile(t);
   if (!t.quote.format && profile.format) t.quote.format = profile.format;
   if (!t.quote.presentation && profile.presentation) t.quote.presentation = profile.presentation;
@@ -116,8 +144,10 @@ function changeQuoteIssuer(id) {
   const t = ticket(modal); if (!t || t.status !== "evaluacion" || t.quote.number) return;
   if (!quoteIssuers().some(x => x.id === id)) return;
   t.quote.issuerId = id; delete t.quote.nextNumber;
-  const accounts = quoteIssuer(t).bankAccounts;
-  if (accounts?.length) t.quote.bankAccounts = structuredClone(accounts);
+  if (!libraryBankAccounts().some(a => a.preselect)) {
+    const accounts = defaultBankAccounts(id);
+    if (accounts.length) t.quote.bankAccounts = accounts;
+  }
   save(); renderTicketModal();
 }
 function addFrequentItem(index) {
@@ -242,15 +272,19 @@ quotationSummary = function(t) {
 const bankKeys = [["holder","Titular"],["bank","Banco"],["currency","Moneda"],["account","Número de cuenta"],["cci","CCI"]];
 function quoteBankEditor(t, editable) {
   const accounts = t.quote.bankAccounts || [], disabled = editable ? "" : "disabled";
-  return `<details class="quote-extra quote-bank" ${!accounts.length && !t.quote.seller?.bank ? "open" : ""}><summary>Cuentas bancarias · al final del PDF</summary>
-    ${!accounts.length ? '<p class="small">Aún no hay cuentas confirmadas. Añade los datos vigentes para indicar dónde abonar.</p>' : ""}
+  const library = libraryBankAccounts(), selected = new Set(accounts.map(bankKey));
+  return `<details class="quote-extra quote-bank" open><summary>Cuentas bancarias · al final del PDF (${accounts.length} marcada${accounts.length === 1 ? "" : "s"})</summary>
+    ${library.length ? `<p class="small">Marca las cuentas que saldrán en esta cotización.</p><div class="quote-bank-options">${library.map((a, i) => `<label class="quote-bank-option"><input type="checkbox" ${selected.has(bankKey(a)) ? "checked" : ""} ${disabled} onchange="toggleQuoteBank(${i},this.checked)"><span><b>${esc(a.bank)}</b> · ${esc(a.holder)}<br><small>${esc(a.account)}${a.cci ? " · CCI " + esc(a.cci) : ""}</small></span></label>`).join("")}</div>` : ""}
+    ${!accounts.length ? '<p class="small">Ninguna cuenta marcada: el PDF no indicará dónde abonar.</p>' : ""}
+    <details class="quote-extra"><summary>Editar datos o añadir una cuenta manual</summary>
     ${accounts.map((a,i)=>`<div class="quote-bank-row"><div class="fields2">${bankKeys.map(([key,label])=>`<label>${label}<input maxlength="${key === "holder" ? 120 : 60}" value="${esc(a[key] || "")}" ${disabled} oninput="setQuoteBank(${i},'${key}',this.value)"></label>`).join("")}</div>${editable ? `<button class="button ghost sm" onclick="removeQuoteBank(${i})">Quitar cuenta</button>` : ""}</div>`).join("")}
-    ${editable ? '<button class="button outline sm" onclick="addQuoteBank()">Añadir cuenta</button> <button class="button ghost sm" onclick="saveDefaultBanks()">Guardar cuentas para próximas cotizaciones</button>' : ""}
+    ${editable ? '<button class="button outline sm" onclick="addQuoteBank()">Añadir cuenta</button> <button class="button ghost sm" onclick="saveDefaultBanks()">Guardar como selección por defecto</button>' : ""}
+    </details>
     <p id="bank-message" class="small" role="status"></p></details>`;
 }
 function addQuoteBank() {
   const t = ticket(modal); if (t?.status !== "evaluacion") return;
-  t.quote.bankAccounts ||= []; if (t.quote.bankAccounts.length >= 5) return toast("Máximo cinco cuentas.");
+  t.quote.bankAccounts ||= []; if (t.quote.bankAccounts.length >= bankLimit) return toast("Máximo " + bankLimit + " cuentas por cotización.");
   t.quote.bankAccounts.push({holder:"",bank:"",currency:"Soles",account:"",cci:""});save();renderTicketModal();
 }
 function setQuoteBank(index,key,value) {
@@ -262,10 +296,15 @@ async function saveDefaultBanks() {
   const t=ticket(modal);if(t?.status!=="evaluacion")return;
   const accounts=t.quote.bankAccounts || [];
   if(accounts.some(a=>!a.holder.trim()||!a.bank.trim()||!a.account.trim()||!a.currency.trim()))return toast("Completa titular, banco, moneda y número de cuenta.");
+  // Nunca se borran opciones: las nuevas se añaden y la selección actual queda como predeterminada.
+  const library=libraryBankAccounts(),chosen=new Set(accounts.map(bankKey));
+  const merged=[...library.map(a=>({...bankSnapshot(a),...(a.issuer?{issuer:a.issuer}:{}),preselect:chosen.has(bankKey(a))})),
+    ...accounts.filter(a=>!library.some(b=>bankKey(b)===bankKey(a))).map(a=>({...bankSnapshot(a),preselect:true}))];
+  if(merged.length>bankLimit)return toast("El catálogo admite hasta "+bankLimit+" cuentas.");
   try {
-    if(LexStore.mode==="firebase") await LexStore.adapter.saveBankAccounts(accounts);
-    db.quoteLibrary ||= {};db.quoteLibrary.bankAccounts=structuredClone(accounts);
-    save();document.getElementById("bank-message").textContent="Cuentas guardadas para las próximas cotizaciones. Las anteriores conservan sus datos.";
+    if(LexStore.mode==="firebase") await LexStore.adapter.saveBankAccounts(merged);
+    db.quoteLibrary ||= {};db.quoteLibrary.bankAccounts=merged;
+    save();document.getElementById("bank-message").textContent="Selección guardada para las próximas cotizaciones. Las anteriores conservan sus datos.";
   } catch(e){toast("No se guardaron las cuentas: "+e.message);}
 }
 const quoteFieldErrorOriginal=quoteFieldError;
