@@ -794,3 +794,20 @@ input[type="password"] {
 .quote-cost-picker select{width:100%;max-width:100%}
 .quote-assistant .small,.quote-bank .small{line-height:1.5}
 @media(max-width:600px){.quote-bank .fields2{grid-template-columns:1fr}.quote-assistant .fields2{grid-template-columns:1fr}}
+
+.quote-number-field{display:grid;gap:4px;justify-items:end;text-align:right}
+.quote-number-field label{font-size:.78rem;font-weight:700;color:#5b6472;text-transform:uppercase;letter-spacing:.04em}
+.quote-number-field span{display:flex;align-items:center;gap:4px}
+.quote-number-field input{width:8.5em;font-weight:700;color:#d84315;text-align:right;font-size:1.05rem}
+.quote-number-field b{color:#d84315;font-size:1.05rem}
+.quote-number-field small{max-width:16em;color:#b45309;line-height:1.35}
+
+.home-quote-buttons{display:flex;flex-wrap:wrap;gap:10px}
+.home-client-quote{background:#1f2933;border-color:#1f2933}
+.quote-photo-row{display:flex;flex-wrap:wrap;gap:10px}
+.quote-photo-row figure{margin:0;display:grid;gap:6px;justify-items:start}
+.quote-photo-row img{width:140px;height:105px;object-fit:cover;border-radius:6px;border:1px solid #dce2ea}
+
+.money-cell{white-space:nowrap}
+.money-cell .tag{display:inline-block;margin:0 4px 4px 0}
+.money-cell small{display:block;color:#5b6472;margin-top:2px}

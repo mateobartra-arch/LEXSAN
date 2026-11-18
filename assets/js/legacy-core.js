@@ -230,8 +230,14 @@ function kpis() {
   ];
   return `<div class="metricgrid">${m.map((x) => `<div class="metric"><span>${x.label}</span><div>${x.value}</div></div>`).join("")}</div>`;
 }
+function moneyCell(t) {
+  if (typeof ticketMoneyStatus !== "function") return "";
+  const { a, pay, invoice } = ticketMoneyStatus(t);
+  return `<td class="money-cell"><span class="tag ${pay.tone}">${esc(pay.label)}</span><span class="tag ${invoice.tone}">${esc(invoice.label)}</span>${a.total ? `<small>${esc(fmt(a.paid))} de ${esc(fmt(a.total))}</small>` : ""}</td>`;
+}
 function rowTickets(items) {
-  return `<div class="tablebox"><table><thead><tr><th>Servicio</th><th>Cliente / equipo</th><th>Estado</th><th>Gestión</th><th></th></tr></thead><tbody>${items.map((t) => `<tr class="clickable" onclick="openTicket(${t.id})"><td><span class="id-dot"></span><span class="ticket-id">${cid(t.id)}</span><div class="muted small" style="margin:4px 0 0 12px">${esc(t.received)}</div></td><td class="namecell"><b>${esc(client(t.clientId).name)}</b><small>${esc(t.equipment)}</small></td><td>${badge(t)}</td><td><span class="table-action">${esc(next(t))}</span></td><td><button class="button outline sm" onclick="event.stopPropagation();openTicket(${t.id})">Abrir ${uiIcon("arrow")}</button></td></tr>`).join("") || `<tr><td colspan="5" class="empty">Sin servicios registrados.</td></tr>`}</tbody></table></div>`;
+  const money = typeof LexSession === "undefined" || LexSession.user?.role !== "tecnico";
+  return `<div class="tablebox"><table><thead><tr><th>Servicio</th><th>Cliente / equipo</th><th>Estado</th>${money ? "<th>Pago y factura</th>" : ""}<th>Gestión</th><th></th></tr></thead><tbody>${items.map((t) => `<tr class="clickable" onclick="openTicket(${t.id})"><td><span class="id-dot"></span><span class="ticket-id">${t.quote?.number ? "N.º " + esc(t.quote.number) : cid(t.id)}</span><div class="muted small" style="margin:4px 0 0 12px">${esc(t.received)}</div></td><td class="namecell"><b>${esc(client(t.clientId).name)}</b><small>${esc(t.equipment)}</small></td><td>${badge(t)}</td>${money ? moneyCell(t) : ""}<td><span class="table-action">${esc(next(t))}</span></td><td><button class="button outline sm" onclick="event.stopPropagation();openTicket(${t.id})">Abrir ${uiIcon("arrow")}</button></td></tr>`).join("") || `<tr><td colspan="${money ? 6 : 5}" class="empty">Sin servicios registrados.</td></tr>`}</tbody></table></div>`;
 }
 function next(t) {
   if (!needsEvaluation(t)) {
@@ -261,6 +267,10 @@ function render() {
       let s = (
         cid(t.id) +
         " " +
+        (t.quote?.number || "") +
+        " " +
+        (t.doc?.number || "") +
+        " " +
         client(t.clientId).name +
         " " +
         t.equipment +
@@ -269,7 +279,7 @@ function render() {
       ).toLowerCase();
       return (
         s.includes(search.toLowerCase()) &&
-        (filter === "todos" || t.status === filter)
+        (filter === "todos" || t.status === filter || (typeof matchMoneyFilter === "function" && matchMoneyFilter(t, filter)))
       );
     });
     if (route === "cotizaciones") arr = arr.filter((t) => t.quote.lines.length);
@@ -280,7 +290,7 @@ function render() {
         ([x, y]) =>
           `<option value="${x}" ${filter === x ? "selected" : ""}>${esc(y)}</option>`,
       )
-      .join("")}</select></div>${rowTickets(arr.sort((a, b) => b.id - a.id))}`;
+      .join("")}${typeof moneyFilters === "object" && (typeof LexSession === "undefined" || LexSession.user?.role !== "tecnico") ? `<optgroup label="Pago y factura">${Object.entries(moneyFilters).map(([x, y]) => `<option value="${x}" ${filter === x ? "selected" : ""}>${esc(y)}</option>`).join("")}</optgroup>` : ""}</select></div>${rowTickets(arr.sort((a, b) => b.id - a.id))}`;
   } else if (route === "clientes") {
     p.innerHTML = `<div class="section-head"><div><div class="eyebrow">DIRECTORIO</div><h1>Clientes</h1><p class="sub">${db.clients.length} clientes registrados</p></div><div class="row wrap"><button class="button outline" onclick="openClientImport()">Importar clientes</button><button class="button" onclick="addClient()">${uiIcon("plus")} Nuevo cliente</button></div></div><div class="card" style="margin:18px 0 14px;padding:17px"><label>Buscar cliente</label><input id="find-client" placeholder="RUC, DNI, nombre o contacto" oninput="renderClientList(this.value)"></div><div id="clients-list"></div>`;
     renderClientList("");

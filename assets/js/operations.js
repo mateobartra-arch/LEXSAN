@@ -108,6 +108,26 @@ renderEvaluationView = function (t, money) {
 function photoInputs(target) {
   return `<div class="fields2"><div><label>Elegir foto de galería</label><input type="file" accept="image/*" onchange="attachImage(this,'${target}')"></div><div><label>Tomar fotografía</label><input type="file" accept="image/*" capture="environment" onchange="attachImage(this,'${target}')"></div></div>`;
 }
+async function compressImage(f) {
+  const data = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(f);
+  });
+  const img = await new Promise((resolve, reject) => {
+    const x = new Image();
+    x.onload = () => resolve(x);
+    x.onerror = reject;
+    x.src = data;
+  });
+  const canvas = document.createElement("canvas"),
+    scale = Math.min(1, 1200 / Math.max(img.width, img.height));
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.72);
+}
 async function attachImage(input, target) {
   const t = ticket(modal),
     f = input.files?.[0];
@@ -116,28 +136,10 @@ async function attachImage(input, target) {
   if (!f.type.startsWith("image/") || f.size > 20 * 1024 * 1024)
     return toast("Elige una imagen de hasta 20 MB.");
   try {
-    const data = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = reject;
-      r.readAsDataURL(f);
-    });
-    const img = await new Promise((resolve, reject) => {
-      const x = new Image();
-      x.onload = () => resolve(x);
-      x.onerror = reject;
-      x.src = data;
-    });
-    const canvas = document.createElement("canvas"),
-      scale = Math.min(1, 1200 / Math.max(img.width, img.height));
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    const src = canvas.toDataURL("image/jpeg", 0.72);
+    const src = await compressImage(f);
     if (target === "quotation") {
       if (modal !== t.id || ticket(modal) !== t || t.status !== "evaluacion") return;
-      quotePhotos.set(t, src);
-      renderTicketModal();
+      if (addQuotePhoto(t, src)) renderTicketModal();
       return;
     }
     if (target === "evaluation") t.eval.photos.push(src);
@@ -469,6 +471,28 @@ function accountRow(t, today = iso()) {
     overdue ? (paid ? "Pago parcial · vencido" : "Vencido") :
     paid ? "Pago parcial" : "Por cobrar";
   return {total, paid, balance, due, overdue, payment};
+}
+/* Estado de cobro y comprobante para listas: pagado / parcial / no pagado / vencido, y con o sin factura. */
+function ticketMoneyStatus(t) {
+  const a = accountRow(t);
+  const pay = a.payment === "Sin importe aprobado" ? { key: "none", label: "Sin aprobar", tone: "" }
+    : !a.balance ? { key: "paid", label: "Pagado", tone: "green" }
+    : a.overdue ? { key: "due", label: a.paid ? "Parcial · vencido" : "Vencido", tone: "red" }
+    : a.paid ? { key: "partial", label: "Pago parcial", tone: "amber" }
+    : { key: "due", label: "No pagado", tone: "red" };
+  const type = t.doc?.type ? t.doc.type.charAt(0).toUpperCase() + t.doc.type.slice(1) : "Factura";
+  const invoice = t.doc?.number ? { key: "with", label: type + " " + t.doc.number, tone: "green" }
+    : { key: "without", label: "Sin factura", tone: t.status === "rechazado" ? "" : "amber" };
+  return { a, pay, invoice };
+}
+const moneyFilters = { "pago:no": "No pagado o parcial", "pago:si": "Pagado", "fact:sin": "Sin factura", "fact:con": "Con factura" };
+function matchMoneyFilter(t, filter) {
+  if (!moneyFilters[filter]) return false;
+  const { a, pay, invoice } = ticketMoneyStatus(t);
+  if (filter === "pago:no") return pay.key !== "none" && a.balance > 0;
+  if (filter === "pago:si") return pay.key === "paid";
+  if (filter === "fact:sin") return invoice.key === "without" && t.status !== "rechazado";
+  return invoice.key === "with";
 }
 function clientStatement(c, items) {
   const rows = items.map(t => ({t, ...accountRow(t)}));

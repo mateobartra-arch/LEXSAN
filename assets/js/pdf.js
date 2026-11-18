@@ -454,6 +454,13 @@ function buildLexsanPDF(t, c, kind) {
     const seller = t.quote.seller || {};
     const adviser = [seller.name, seller.email, seller.phone].filter(v => v?.trim());
     if (adviser.length) paragraph("Asesoría: " + adviser.join(" | "), 8.5, 12);
+    const letter = !!t.quote.letter;
+    if (letter) {
+      const att = t.quote.customer?.contact || c.contact;
+      if (att) paragraph("Att.: " + att, 9.3, 13);
+      paragraph("Mediante la presente nos dirigimos a Uds. con el fin de hacerles llegar nuestra cotización por: SERVICIO DE " +
+        String(t.quote.annex?.title || t.equipment || "").trim().toUpperCase() + (t.serial ? " " + t.serial.toUpperCase() : "") + ".", 9.3, 13);
+    }
     paragraph(
       "Moneda: soles (PEN). Precios unitarios e importes de ítems SIN IGV. " +
         (priceMode(t.quote) === "agreed"
@@ -479,19 +486,22 @@ function buildLexsanPDF(t, c, kind) {
     const detailed = t.quote.format === "detailed";
     const costGroups = ["Materiales", "Equipos utilizados", "Mano de obra", "Suministros"];
     const quoteLines = detailed ? [...t.quote.lines].sort((a,b) => costGroups.indexOf(a.costGroup || "Materiales") - costGroups.indexOf(b.costGroup || "Materiales")) : t.quote.lines;
-    let previousGroup = "";
+    let previousGroup = "", groupNo = 0, lineNo = 0;
     for (const item of quoteLines) {
       const group = item.costGroup || "Materiales";
       if (detailed && group !== previousGroup) {
         if (y + 60 > 730) { footer(); header(true); tableHeader(); }
         pdf.rect(mLeft, y, tableWidth, 24, PDF_LIGHT);
-        pdf.text(group.toUpperCase(), 54, y + 16, 9, true);
+        groupNo = costGroups.indexOf(group) + 1; lineNo = 0;
+        pdf.text((letter ? groupNo + ".00   " : "") + group.toUpperCase(), 54, y + 16, 9, true);
         const subtotal = quoteLines.filter(l => (l.costGroup || "Materiales") === group).reduce((sum,l) => sum + round(l.qty * l.price), 0);
         pdf.text(fmt(round(subtotal)), 539, y + 16, 9, true, PDF_BLACK, "right");
         y += 24;
         previousGroup = group;
       }
+      lineNo++;
       const desc = pdf.lines(
+        (letter && detailed ? groupNo + "." + String(lineNo).padStart(2, "0") + "   " : "") +
         (item.code?.trim() ? "Cód. " + item.code.trim() + " | " : "") +
           (item.category ? item.category + " / " : "") + item.desc + (detailed ? " · Unidad: " + (item.unit || "und") : ""),
         292,
@@ -548,19 +558,6 @@ function buildLexsanPDF(t, c, kind) {
       }
     }
     const vehicleName = [t.vehicle?.brand, t.vehicle?.model].filter(Boolean).join(" ");
-    const photo = quotePhotos.get(t);
-    if (photo) {
-      const name = pdf.image(photo.split(",")[1], "quote-photo");
-      const image = pdf.images.find(item => item.name === name);
-      if (image) {
-        const ratio = image.w / image.h;
-        const width = Math.min(245, 125 * ratio);
-        const height = width / ratio;
-        room(height + 50);
-        pdf.placeImage(name, 54, y + 8, width, height);
-        y += height + 12;
-      }
-    }
     if (vehicleName) {
       y += 8;
       paragraph(
@@ -577,19 +574,29 @@ function buildLexsanPDF(t, c, kind) {
       pdf.text(fmt(value), 539, y + 14, 9.3, bold, PDF_BLACK, "right");
       y += 22;
     }
-    moneyRow("Suma de ítems sin IGV", v.sum);
-    if (v.overhead) moneyRow("Gastos generales y utilidad " + t.quote.overheadPercent + "%", v.overhead);
-    moneyRow("Descuento sin IGV", -v.discount);
+    moneyRow(letter ? "SUBTOTAL" : "Suma de ítems sin IGV", v.sum);
+    if (v.overhead) moneyRow((letter ? "GASTOS GENERALES Y UTILIDAD " : "Gastos generales y utilidad ") + t.quote.overheadPercent + "%", v.overhead);
+    if (!letter || v.discount) moneyRow("Descuento sin IGV", -v.discount);
     if (v.adjust) moneyRow("Ajuste comercial sin IGV", v.adjust);
-    moneyRow("Neto sin IGV (base imponible)", v.base);
+    if (!letter) moneyRow("Neto sin IGV (base imponible)", v.base);
     if (t.quote.presentation !== "base") moneyRow("IGV (18%)", v.igv);
     pdf.rect(300, y, 251, 35, PDF_ORANGE);
-    pdf.text(t.quote.presentation === "base" ? "TOTAL SIN IGV" : "TOTAL CON IGV", 310, y + 23, 10.5, true, [1, 1, 1]);
+    pdf.text(letter ? "TOTAL VALORIZADO" : t.quote.presentation === "base" ? "TOTAL SIN IGV" : "TOTAL CON IGV", 310, y + 23, 10.5, true, [1, 1, 1]);
     pdf.text(fmt(t.quote.presentation === "base" ? v.base : v.gross), 541, y + 23, 12, true, [1, 1, 1], "right");
     y += 46;
-    if (t.quote.presentation === "base") paragraph("Importes sin IGV. Agregar IGV del 18 % al facturar.", 8.5, 12);
-    title("CONDICIONES COMERCIALES");
-    paragraph(quoteTermsText(t.quote) || "Condiciones comerciales por confirmar.");
+    if (letter) {
+      paragraph("TOTAL VALORIZADO CONTRACTUAL (NO INCLUYE EL IGV).", 8.8, 12);
+      paragraph("NOTA: Los costos calculados son variables y es de acuerdo a la evaluación de cada equipo.", 8.8, 12);
+      const cond = t.quote.conditions || {};
+      title("CONDICIONES");
+      paragraph(["Forma de pago: " + (cond.payment || "Crédito 30 días"), "Impuestos: Agregar 18% IGV.", "Tiempo de entrega: " + (cond.deadline || "01 día"),
+        cond.validity && "Validez de la oferta: " + cond.validity, t.quote.terms?.trim()].filter(Boolean).join("\n"));
+      paragraph("A la espera de vuestra orden, quedamos de ustedes.", 9.3, 13);
+    } else {
+      if (t.quote.presentation === "base") paragraph("Importes sin IGV. Agregar IGV del 18 % al facturar.", 8.5, 12);
+      title("CONDICIONES COMERCIALES");
+      paragraph(quoteTermsText(t.quote) || "Condiciones comerciales por confirmar.");
+    }
     const annex = t.quote.annex || {};
     function structuredList(text, notes = false) {
       const entries = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
@@ -626,6 +633,25 @@ function buildLexsanPDF(t, c, kind) {
       }
       title("ALCANCE TÉCNICO RECOMENDADO");
       paragraph(t.eval.fixes, 8.9, 12.5);
+    }
+    const photos = quotePhotos.get(t) || [];
+    if (photos.length) {
+      title("REGISTRO FOTOGRÁFICO");
+      const boxW = 240, boxH = 180;
+      for (let k = 0; k < photos.length; k += 2) {
+        room(boxH + 14);
+        [photos[k], photos[k + 1]].forEach((src, side) => {
+          if (!src) return;
+          const name = pdf.image(src.split(",")[1], "quote-photo-" + (k + side));
+          const image = pdf.images.find(item => item.name === name);
+          if (!image) return;
+          const ratio = image.w / image.h;
+          let w = boxW, h = w / ratio;
+          if (h > boxH) { h = boxH; w = h * ratio; }
+          pdf.placeImage(name, (side ? 306 : 48) + (boxW - w) / 2, y + (boxH - h) / 2, w, h);
+        });
+        y += boxH + 14;
+      }
     }
     if (t.quote.bankAccounts?.length) {
       room(115);
